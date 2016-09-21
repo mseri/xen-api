@@ -1501,13 +1501,16 @@ let update_vm ~__context id =
                    begin
                      try
                        let gm = Db.VM.get_guest_metrics ~__context ~self in
-                       let update_time = Db.VM_guest_metrics.get_last_updated ~__context ~self:gm in
-                       if update_time < start_time then begin
-                         debug "VM %s guest metrics update time (%s) < VM start time (%s): deleting"
-                           id (Date.to_string update_time) (Date.to_string start_time);
-                         Xapi_vm_helpers.delete_guest_metrics ~__context ~self;
-                         check_guest_agent ();
-                       end
+                       if gm = Ref.null then 
+                         debug "VM guest metrics not present for VM %s" id
+                       else 
+                         let update_time = Db.VM_guest_metrics.get_last_updated ~__context ~self:gm in
+                         if update_time < start_time then begin
+                           debug "VM %s guest metrics update time (%s) < VM start time (%s): deleting"
+                             id (Date.to_string update_time) (Date.to_string start_time);
+                           Xapi_vm_helpers.delete_guest_metrics ~__context ~self;
+                           check_guest_agent ();
+                         end
                      with _ -> () (* The guest metrics didn't exist *)
                    end
                 ) info
