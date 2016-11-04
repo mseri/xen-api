@@ -486,7 +486,12 @@ let update_vbds doms =
 						let cum_wr_rd_cnt = Int64.add b.st_rd_cnt b.st_wr_cnt in
 						if cum_wr_rd_usecs > 0L then
 							Int64.to_float (Int64.div cum_wr_rd_cnt cum_wr_rd_usecs) /. 1000. 
-						else if cum_wr_rd_usecs = 0L then 0.0 else nan in
+						else begin
+							let default_value = if cum_wr_rd_usecs = 0L then 0.0 else nan in
+							debug "Caught division by 0 in update_vbd, defaulting to: %s"
+								(string_of_float default_value);
+							default_value
+						end in
 					(* Average Queue Size is computed as the sum of the
 					 * read and write queues' averaged over 5 seconds *)
 					let avgqu_sz = Int64.div (Int64.add b.st_rd_sum_usecs b.st_wr_sum_usecs) avgqu_normalizer in
@@ -559,7 +564,12 @@ let update_vbds doms =
 						let cum_wr_rd_cnt = Int64.add b.st_rd_cnt b.st_wr_cnt in
 						if cum_wr_rd_usecs > 0L then
 							Int64.to_float (Int64.div cum_wr_rd_cnt cum_wr_rd_usecs) /. 1000. 
-						else if cum_wr_rd_usecs = 0L then 0.0 else nan in
+						else begin
+							let default_value = if cum_wr_rd_usecs = 0L then 0.0 else nan in
+							debug "Caught division by 0 in update_vbd, defaulting to: %s"
+								(string_of_float default_value);
+							default_value
+						end
 					(* Average Queue Size is computed as the sum of the
 					 * read and write queues' averaged over 5 seconds *)
 					let avgqu_sz = Int64.div (Int64.add b.st_rd_sum_usecs b.st_wr_sum_usecs) avgqu_normalizer in
