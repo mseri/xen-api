@@ -1856,23 +1856,37 @@ let select_vms ?(include_control_vms = false) ?(include_template_vms = false) rp
 
 
 let select_hosts rpc session_id params ignore_params =
-  (* try matching host=<name or uuid> first *)
   let do_filter params =
     let hosts = Client.Host.get_all_records_where rpc session_id "true" in
-    let all_recs = List.map (fun (host,host_r) -> let r = host_record rpc session_id host in r.setrefrec (host,host_r); r) hosts in
-
+    let all_recs = List.map (fun (host,host_r) ->
+        let r = host_record rpc session_id host in
+        r.setrefrec (host,host_r); r
+      ) hosts in
     let filter_params = List.filter (fun (p,_) ->
         let stem=List.hd (String.split ':' p) in not (List.mem stem (stdparams @ ignore_params))) params in
     (* Filter all the records *)
     List.fold_left filter_records_on_fields all_recs filter_params
   in
 
-  if List.mem_assoc "host" params
-  then
-    try [host_record rpc session_id (Client.Host.get_by_uuid rpc session_id (List.assoc "host" params))]
-    with _ -> do_filter (List.map (fun (k,v) -> if k="host" then ("name-label",v) else (k,v)) params)
-  else
-    do_filter params
+  (* try matching host=<name or uuid> first *)
+  let host_name_or_ref = try Some (List.assoc "host" params) with _ -> None
+  in
+  let params = match host_name_or_ref with
+    (* XXX: name-label and hostname are synced but name-label is
+     * mutable so it could be reasonable to look for both *)
+    | Some name -> ("name-label", name) :: (List.remove_assoc "host" params)
+    | None      -> params
+  in
+  match host_name_or_ref, do_filter params with
+  (* CA-227062: try with a uuid only after being sure it's not a hostname *)
+  | Some uuid, [] -> begin
+      try
+        let host_ref = Client.Host.get_by_uuid rpc session_id uuid in
+        [host_record rpc session_id host_ref]
+      with _ -> []
+    end
+  | _, result -> result
+
 
 let select_vm_geneva rpc session_id params =
   if List.mem_assoc "vm-name" params then
