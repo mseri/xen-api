@@ -793,7 +793,7 @@ let gen_cmds rpc session_id =
     ; Client.Role.(mk get_all (fun ~rpc ~session_id ~expr -> get_all_records_where ~rpc ~session_id ~expr:Xapi_role.expr_no_permissions)
                      get_by_uuid role_record "role" [] ["uuid";"name";"description";"subroles"] rpc session_id)
     (* ; Client.Blob.(mk get_all get_all_records_where get_by_uuid blob_record "blob" [] ["uuid";"mime-type"] rpc session_id)
-       		 *)
+       *)
     ; Client.Message.(mk get_all get_all_records_where get_by_uuid message_record "message" [] [] rpc session_id)
     ; Client.Secret.(mk get_all get_all_records_where get_by_uuid secret_record "secret" [] [] rpc session_id)
     ; Client.VM_appliance.(mk get_all get_all_records_where get_by_uuid vm_appliance_record "appliance" [] [] rpc session_id)
@@ -803,7 +803,7 @@ let gen_cmds rpc session_id =
     ; Client.VGPU_type.(mk get_all get_all_records_where get_by_uuid vgpu_type_record "vgpu-type" [] ["uuid";"vendor-name";"model-name";"max-resolution";"max-heads"] rpc session_id)
     ; Client.DR_task.(mk get_all get_all_records_where get_by_uuid dr_task_record "drtask" [] [] rpc session_id)
     (*; Client.Alert.(mk get_all get_all_records_where get_by_uuid alert_record "alert" [] ["uuid";"message";"level";"timestamp";"system";"task"] rpc session_id)
-      		 *)
+      *)
     ; Client.PVS_site.(mk get_all get_all_records_where get_by_uuid pvs_site_record "pvs-site" [] ["uuid"; "name-label"; "name-description"; "pvs-uuid"; "pvs-server-uuids"] rpc session_id)
     ; Client.PVS_server.(mk get_all get_all_records_where get_by_uuid pvs_server_record "pvs-server" [] ["uuid"; "addresses"; "pvs-site-uuid"] rpc session_id)
     ; Client.PVS_proxy.(mk get_all get_all_records_where get_by_uuid pvs_proxy_record "pvs-proxy" [] ["uuid"; "vif-uuid"; "pvs-site-uuid"; "currently-attached"; "cache-sr-uuid"] rpc session_id)
@@ -1011,7 +1011,7 @@ let pool_emergency_transition_to_master printer rpc session_id params =
   end
   else
     printer (Cli_printer.PList ["Host agent is already master. Use '--force' to execute the operation anyway."])
-  
+
 let pool_recover_slaves printer rpc session_id params =
   let hosts = Client.Pool.recover_slaves ~rpc ~session_id in
   let host_uuids = List.map (fun href -> Client.Host.get_uuid rpc session_id href) hosts in
@@ -1136,7 +1136,7 @@ let vdi_introduce printer rpc session_id params =
   let uuid = List.assoc "uuid" params in
   let sR = Client.SR.get_by_uuid rpc session_id (List.assoc "sr-uuid" params) in
   (* CA-13140: Some of the backends set their own name-labels, and the VDI introduce will
-     	   not override them if we pass in the empty string.  *)
+     not override them if we pass in the empty string.  *)
   let name_label = try List.assoc "name-label" params with _ -> "" in
   let name_description = if List.mem_assoc "name-description" params then List.assoc "name-description" params else "" in
   let _type = vdi_type_of_string (List.assoc "type" params) in
@@ -1447,7 +1447,7 @@ let sr_create fd printer rpc session_id params =
   let content_type = List.assoc_default "content-type" params "" in
   let device_config = parse_device_config params in
   (* If the device-config parameter is of the form k-filename=v, then we assume the
-     	   key is 'k' and the value is stored in a file named 'v' *)
+     key is 'k' and the value is stored in a file named 'v' *)
   let suffix = "-filename" in
   let device_config = List.map (fun (k,v) ->
       if String.endswith suffix k then begin
@@ -1791,9 +1791,9 @@ let event_wait printer rpc session_id params =
   let filter_params = List.filter (fun (p,_) -> not (List.mem p ("class"::stdparams))) params in
 
   (* Each filter_params is a key value pair:
-     	   (key, value) if the user entered "key=value"
-     	   (key, "/=" value) if the user entered "key=/=value"
-     	   We now parse these into a slightly nicer form *)
+     (key, value) if the user entered "key=value"
+     (key, "/=" value) if the user entered "key=/=value"
+     We now parse these into a slightly nicer form *)
 
   let filter_params = List.map
       (fun (key, value) ->
@@ -1869,22 +1869,26 @@ let select_hosts rpc session_id params ignore_params =
   in
 
   (* try matching host=<name or uuid> first *)
-  let host_name_or_ref = try Some (List.assoc "host" params) with _ -> None
-  in
+  let host_name_or_ref = try Some (List.assoc "host" params) with _ -> None in
+  let other_params = List.remove_assoc "host" params in
   let params = match host_name_or_ref with
-    (* XXX: name-label and hostname are synced but name-label is
-     * mutable so it could be reasonable to look for both *)
-    | Some name -> ("name-label", name) :: (List.remove_assoc "host" params)
-    | None      -> params
+    | Some value -> ("name-label", value) :: other_params
+    | None       -> params
   in
   match host_name_or_ref, do_filter params with
   (* CA-227062: try with a uuid only after being sure it's not a hostname *)
-  | Some uuid, [] -> begin
-      try
-        let host_ref = Client.Host.get_by_uuid rpc session_id uuid in
-        [host_record rpc session_id host_ref]
-      with _ -> []
-    end
+  | Some value, [] ->
+    (* name-label and hostname are synced but name-label is
+     * mutable so if the first failed we double check *)
+    let new_params = ("hostname", value) :: other_params in
+    let new_attempt = do_filter new_params in
+    if new_attempt = []
+    then
+      (try
+         let host_ref = Client.Host.get_by_uuid rpc session_id value in
+         [host_record rpc session_id host_ref]
+       with _ -> [])
+    else new_attempt
   | _, result -> result
 
 
@@ -2416,8 +2420,8 @@ let vm_install_real printer rpc session_id template name description params =
       Client.VM.get_suspend_SR rpc session_id template in
 
   (* It's fine that we still don't have a SR information till this step, we'll do
-     	   a VM.clone instead of VM.copy. However we need to figure out sr_uuid for
-     	   provisioning disks if any. *)
+     a VM.clone instead of VM.copy. However we need to figure out sr_uuid for
+     provisioning disks if any. *)
   let sr_uuid = match sr_ref with
     | Some r when r <> Ref.null -> Client.SR.get_uuid rpc session_id r
     | _ ->
@@ -2730,7 +2734,7 @@ let vm_migrate printer rpc session_id params =
   let params = List.map (fun (k, v) -> if (k = "host-uuid") || (k = "host-name") then ("host", v) else (k, v)) params in
   let options = List.map_assoc_with_key (string_of_bool +++ bool_of_string) (List.restrict_with_default "false" ["force"; "live"; "copy"] params) in
   (* If we specify all of: remote-master, remote-username, remote-password
-     	   then we're using the new codepath *)
+     then we're using the new codepath *)
   if List.mem_assoc "remote-master" params && (List.mem_assoc "remote-username" params)
      && (List.mem_assoc "remote-password" params) then begin
     printer (Cli_printer.PMsg "Performing a Storage XenMotion migration. Your VM's VDIs will be migrated with the VM.");
@@ -3094,7 +3098,7 @@ let host_license_view printer rpc session_id params =
 
 let with_license_server_changes printer rpc session_id params hosts f =
   (* Save the original license server details for each host;
-     	 * in case of failure we will need to roll back. *)
+     * in case of failure we will need to roll back. *)
   let current_license_servers =
     List.map
       (fun host -> (host, Client.Host.get_license_server rpc session_id host))
@@ -3266,7 +3270,7 @@ let download_file ~__context rpc session_id task fd filename uri label =
     | Response OK -> true
     | Response Failed ->
       (* Need to check whether the thin cli managed to contact the server
-         				   or not. If not, we need to mark the task as failed *)
+         or not. If not, we need to mark the task as failed *)
       if Client.Task.get_progress rpc session_id task < 0.0
       then Db_actions.DB_Action.Task.set_status ~__context ~self:task ~value:`failure;
       false
@@ -3275,7 +3279,7 @@ let download_file ~__context rpc session_id task fd filename uri label =
   wait_for_task_complete rpc session_id task;
 
   (* Check the server status -- even if the client thinks it's ok, we need
-     	   to check that the server does too. *)
+     to check that the server does too. *)
   match Client.Task.get_status rpc session_id task with
   | `success ->
     if ok
@@ -3399,7 +3403,7 @@ let vm_import fd printer rpc session_id params =
       debug "Looking like a Zurich/Geneva XVA";
       (* Zurich/Geneva style XVA import *)
       (* If a task was passed in, use that - else create a new one. UI uses "task_id" to pass reference [UI uses ThinCLI for Geneva import];
-         						xe now allows task-uuid on cmd-line *)
+         xe now allows task-uuid on cmd-line *)
       let using_existing_task = (List.mem_assoc "task_id" params) || (List.mem_assoc "task-uuid" params) in
       let importtask =
         if List.mem_assoc "task_id" params
@@ -3448,12 +3452,12 @@ let vm_import fd printer rpc session_id params =
                          let finished = ref false in
                          while not(!finished) do
                            (* Nb.
-                              														* The check for task cancelling is done here in the cli server. This is due to the fact that we've got
-                              														* 3 parties talking to one another here: the thin cli, the cli server and the import handler. If the
-                              														* import handler was checking, it would close its socket on task cancelling. This only happens after
-                              														* each chunk is sent. Unfortunately the cli server wouldn't notice until it had already requested the
-                              														* data from the thin cli, and would have to wait for it to finish sending its chunk before it could
-                              														* alert it to the failure. *)
+                              * The check for task cancelling is done here in the cli server. This is due to the fact that we've got
+                              * 3 parties talking to one another here: the thin cli, the cli server and the import handler. If the
+                              * import handler was checking, it would close its socket on task cancelling. This only happens after
+                              * each chunk is sent. Unfortunately the cli server wouldn't notice until it had already requested the
+                              * data from the thin cli, and would have to wait for it to finish sending its chunk before it could
+                              * alert it to the failure. *)
 
                            (let l=Client.Task.get_current_operations rpc session_id importtask in
                             if List.exists (fun (_,x) -> x=`cancel) l
@@ -4177,7 +4181,7 @@ let wait_for_task rpc session_id task __context fd op_str =
     | Response OK -> true
     | Response Failed ->
       (* Need to check whether the thin cli managed to contact the server or
-         			   not. If not, we need to mark the task as failed *)
+         not. If not, we need to mark the task as failed *)
       if Client.Task.get_progress rpc session_id task < 0.0
       then Db_actions.DB_Action.Task.set_status ~__context
           ~self:task ~value:`failure;
@@ -4319,7 +4323,7 @@ let update_upload fd printer rpc session_id params =
       if List.mem_assoc "sr-uuid" params
       then Client.SR.get_by_uuid rpc session_id (List.assoc "sr-uuid" params)
       else Client.Pool.get_default_SR ~rpc ~session_id ~self:(List.hd pools)
-  in
+    in
     let uri = Printf.sprintf "%s%s?session_id=%s&sr_id=%s&task_id=%s"
         prefix Constants.import_raw_vdi_uri (Ref.string_of session_id) (Ref.string_of sr)(Ref.string_of task_id) in
     let _ = debug "trying to post patch to uri:%s" uri in
@@ -4819,9 +4823,9 @@ let livepatch_status_to_string state =
 let update_precheck printer rpc session_id params =
   let uuid = List.assoc "uuid" params in
   let result = do_host_op rpc session_id (fun _ host ->
-    let host_ref = host.getref () in
-    let ref = Client.Pool_update.get_by_uuid rpc session_id uuid in
-    Client.Pool_update.precheck rpc session_id ref host_ref ) params ["uuid"] in
+      let host_ref = host.getref () in
+      let ref = Client.Pool_update.get_by_uuid rpc session_id uuid in
+      Client.Pool_update.precheck rpc session_id ref host_ref ) params ["uuid"] in
   let result_msg = List.map livepatch_status_to_string result in
   printer (Cli_printer.PList result_msg)
 
