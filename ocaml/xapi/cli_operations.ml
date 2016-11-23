@@ -1847,12 +1847,20 @@ let select_vms ?(include_control_vms = false) ?(include_template_vms = false) rp
   in
 
   (* try matching vm=<name or uuid> first *)
-  if List.mem_assoc "vm" params
-  then
-    try [vm_record rpc session_id (Client.VM.get_by_uuid rpc session_id (List.assoc "vm" params))]
-    with _ -> do_filter (List.map (fun (k,v) -> if k="vm" then ("name-label",v) else (k,v)) params)
-  else
-    do_filter params
+  let vm_name_or_ref = try Some (List.assoc "vm" params) with _ -> None in
+  let params = match vm_name_or_ref with
+    | Some value -> ("name-label", value) :: (List.remove_assoc "vm" params)
+    | None       -> params
+  in
+  match vm_name_or_ref, do_filter params with
+  (* try with a uuid only after being sure it's not a vm name *)
+  | Some uuid, [] -> begin
+      try
+        let vm_ref = Client.VM.get_by_uuid rpc session_id uuid in
+        [vm_record rpc session_id vm_ref]
+      with _ -> []
+    end
+  | _, result -> result
 
 
 let select_hosts rpc session_id params ignore_params =
