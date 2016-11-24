@@ -1869,22 +1869,26 @@ let select_hosts rpc session_id params ignore_params =
   in
 
   (* try matching host=<name or uuid> first *)
-  let host_name_or_ref = try Some (List.assoc "host" params) with _ -> None
-  in
+  let host_name_or_ref = try Some (List.assoc "host" params) with _ -> None in
+  let other_params = List.remove_assoc "host" params in
   let params = match host_name_or_ref with
-    (* XXX: name-label and hostname are synced but name-label is
-     * mutable so it could be reasonable to look for both *)
-    | Some name -> ("name-label", name) :: (List.remove_assoc "host" params)
-    | None      -> params
+    | Some value -> ("name-label", value) :: other_params
+    | None       -> params
   in
   match host_name_or_ref, do_filter params with
   (* CA-227062: try with a uuid only after being sure it's not a hostname *)
-  | Some uuid, [] -> begin
-      try
-        let host_ref = Client.Host.get_by_uuid rpc session_id uuid in
-        [host_record rpc session_id host_ref]
-      with _ -> []
-    end
+  | Some value, [] ->
+    (* name-label and hostname are synced but name-label is
+     * mutable so if the first failed we double check *)
+    let new_params = ("hostname", value) :: other_params in
+    let new_attempt = do_filter new_params in
+    if new_attempt = []
+    then
+      (try
+         let host_ref = Client.Host.get_by_uuid rpc session_id value in
+         [host_record rpc session_id host_ref]
+       with _ -> [])
+    else new_attempt
   | _, result -> result
 
 
