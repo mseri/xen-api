@@ -1831,7 +1831,7 @@ let select_vms ?(include_control_vms = false) ?(include_template_vms = false) rp
 
   let do_filter params =
     let vm_name_or_ref = try Some (
-        (* Escape every " character by replacing it with \" *)
+        (* Escape every quote character *)
         List.assoc "vm" params |> Stdext.Xstringext.String.replace "\"" "\\\""
       ) with _ -> None in
     let params, where_clause = match vm_name_or_ref with
@@ -1863,7 +1863,7 @@ let select_vms ?(include_control_vms = false) ?(include_template_vms = false) rp
 let select_hosts rpc session_id params ignore_params =
   let do_filter params =
     let host_name_or_ref = try Some (
-        (* Escape every " character by replacing it with \" *)
+        (* Escape every quote character *)
         List.assoc "host" params |> Stdext.Xstringext.String.replace "\"" "\\\""
       ) with _ -> None in
     let params, where_clause = match host_name_or_ref with
@@ -1912,7 +1912,7 @@ let select_vm_geneva rpc session_id params =
 let select_srs rpc session_id params ignore_params =
   let do_filter params =
     let sr_name_or_ref = try Some (
-        (* Escape every " character by replacing it with \" *)
+        (* Escape every quote character *)
         List.assoc "sr" params |> Stdext.Xstringext.String.replace "\"" "\\\""
       ) with _ -> None in
     let params, where_clause = match sr_name_or_ref with
