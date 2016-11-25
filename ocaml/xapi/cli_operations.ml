@@ -1830,7 +1830,19 @@ let select_vms ?(include_control_vms = false) ?(include_template_vms = false) rp
   let params = if not include_template_vms then ("is-a-template"    , "false") :: params else params in
 
   let do_filter params =
-    let vms = Client.VM.get_all_records_where rpc session_id "true" in
+    let vm_name_or_ref = try Some (
+        (* Escape every " character by replacing it with \" *)
+        List.assoc "vm" params |> Stdext.Xstringext.String.replace "\"" "\\\""
+      ) with _ -> None in
+    let params, where_clause = match vm_name_or_ref with
+      | None -> params, "true"
+      | Some v -> (
+          (* try matching vm=<name or uuid> *)
+          List.remove_assoc "vm" params,
+          Printf.sprintf "(field \"uuid\"=\"%s\") or (field \"name__label\"=\"%s\")" v v
+        )
+    in
+    let vms = Client.VM.get_all_records_where rpc session_id where_clause in
     let all_recs = List.map (fun (vm,vm_r) -> let r = vm_record rpc session_id vm in r.setrefrec (vm,vm_r); r) vms in
     (* Filter on everything on the cmd line except params=... *)
     let filter_params = List.filter (fun (p,_) ->
@@ -1845,59 +1857,31 @@ let select_vms ?(include_control_vms = false) ?(include_template_vms = false) rp
     (* Filter all the records *)
     List.fold_left filter_records_on_fields all_recs filter_params
   in
-
-  (* try matching vm=<name or uuid> first *)
-  let vm_name_or_ref = try Some (List.assoc "vm" params) with _ -> None in
-  let params = match vm_name_or_ref with
-    | Some value -> ("name-label", value) :: (List.remove_assoc "vm" params)
-    | None       -> params
-  in
-  match vm_name_or_ref, do_filter params with
-  (* try with a uuid only after being sure it's not a vm name *)
-  | Some uuid, [] -> begin
-      try
-        let vm_ref = Client.VM.get_by_uuid rpc session_id uuid in
-        [vm_record rpc session_id vm_ref]
-      with _ -> []
-    end
-  | _, result -> result
+  do_filter params
 
 
 let select_hosts rpc session_id params ignore_params =
   let do_filter params =
-    let hosts = Client.Host.get_all_records_where rpc session_id "true" in
-    let all_recs = List.map (fun (host,host_r) ->
-        let r = host_record rpc session_id host in
-        r.setrefrec (host,host_r); r
-      ) hosts in
+    let host_name_or_ref = try Some (
+        (* Escape every " character by replacing it with \" *)
+        List.assoc "host" params |> Stdext.Xstringext.String.replace "\"" "\\\""
+      ) with _ -> None in
+    let params, where_clause = match host_name_or_ref with
+      | None -> params, "true"
+      | Some v -> (
+          (* try matching host=<name or uuid> *)
+          List.remove_assoc "host" params,
+          Printf.sprintf "(field \"uuid\"=\"%s\") or (field \"hostname\"=\"%s\") or (field \"name__label\"=\"%s\")" v v v
+        )
+    in
+    let hosts = Client.Host.get_all_records_where rpc session_id where_clause in
+    let all_recs = List.map (fun (host,host_r) -> let r = host_record rpc session_id host in r.setrefrec (host,host_r); r) hosts in
     let filter_params = List.filter (fun (p,_) ->
         let stem=List.hd (String.split ':' p) in not (List.mem stem (stdparams @ ignore_params))) params in
     (* Filter all the records *)
     List.fold_left filter_records_on_fields all_recs filter_params
   in
-
-  (* try matching host=<name or uuid> first *)
-  let host_name_or_ref = try Some (List.assoc "host" params) with _ -> None in
-  let other_params = List.remove_assoc "host" params in
-  let params = match host_name_or_ref with
-    | Some value -> ("name-label", value) :: other_params
-    | None       -> params
-  in
-  match host_name_or_ref, do_filter params with
-  (* CA-227062: try with a uuid only after being sure it's not a hostname *)
-  | Some value, [] ->
-    (* name-label and hostname are synced but name-label is
-     * mutable so if the first failed we double check *)
-    let new_params = ("hostname", value) :: other_params in
-    let new_attempt = do_filter new_params in
-    if new_attempt = []
-    then
-      (try
-         let host_ref = Client.Host.get_by_uuid rpc session_id value in
-         [host_record rpc session_id host_ref]
-       with _ -> [])
-    else new_attempt
-  | _, result -> result
+  do_filter params
 
 
 let select_vm_geneva rpc session_id params =
@@ -1927,6 +1911,18 @@ let select_vm_geneva rpc session_id params =
 
 let select_srs rpc session_id params ignore_params =
   let do_filter params =
+    let sr_name_or_ref = try Some (
+        (* Escape every " character by replacing it with \\" *)
+        List.assoc "sr" params |> Stdext.Xstringext.String.replace "\"" "\\\""
+      ) with _ -> None in
+    let params, where_clause = match sr_name_or_ref with
+      | None -> params, "true"
+      | Some v -> (
+          (* try matching sr=<name or uuid> *)
+          List.remove_assoc "sr" params,
+          Printf.sprintf "(field \"uuid\"=\"%s\") or (field \"name_label\"=\"%s\")" v v v
+        )
+    in
     let srs = Client.SR.get_all_records_where rpc session_id "true" in
     let all_recs = List.map (fun (sr,sr_r) -> let r = sr_record rpc session_id sr in r.setrefrec (sr,sr_r); r) srs in
 
