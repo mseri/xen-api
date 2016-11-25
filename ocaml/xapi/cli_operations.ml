@@ -1912,7 +1912,7 @@ let select_vm_geneva rpc session_id params =
 let select_srs rpc session_id params ignore_params =
   let do_filter params =
     let sr_name_or_ref = try Some (
-        (* Escape every " character by replacing it with \\" *)
+        (* Escape every " character by replacing it with \" *)
         List.assoc "sr" params |> Stdext.Xstringext.String.replace "\"" "\\\""
       ) with _ -> None in
     let params, where_clause = match sr_name_or_ref with
@@ -1920,10 +1920,10 @@ let select_srs rpc session_id params ignore_params =
       | Some v -> (
           (* try matching sr=<name or uuid> *)
           List.remove_assoc "sr" params,
-          Printf.sprintf "(field \"uuid\"=\"%s\") or (field \"name_label\"=\"%s\")" v v v
+          Printf.sprintf "(field \"uuid\"=\"%s\") or (field \"name__label\"=\"%s\")" v v
         )
     in
-    let srs = Client.SR.get_all_records_where rpc session_id "true" in
+    let srs = Client.SR.get_all_records_where rpc session_id where_clause in
     let all_recs = List.map (fun (sr,sr_r) -> let r = sr_record rpc session_id sr in r.setrefrec (sr,sr_r); r) srs in
 
     let filter_params = List.filter (fun (p,_) ->
@@ -1931,13 +1931,7 @@ let select_srs rpc session_id params ignore_params =
     (* Filter all the records *)
     List.fold_left filter_records_on_fields all_recs filter_params
   in
-  (* try matching sr=<name or uuid> first *)
-  if List.mem_assoc "sr" params
-  then
-    try [sr_record rpc session_id (Client.SR.get_by_uuid rpc session_id (List.assoc "sr" params))]
-    with _ -> do_filter (List.map (fun (k,v) -> if k="sr" then ("name-label",v) else (k,v)) params)
-  else
-    do_filter params
+  do_filter params
 
 exception Multiple_failure of (string * string) list
 
