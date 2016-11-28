@@ -34,7 +34,7 @@ open D
 let vmselectors = ["<vm-selectors>"]
 let vmselectorsinfo = " The simplest way to select the VM on which the \
                        operation is to be performed is by supplying the argument \
-                       'vm=<name or uuid>'. VMs can also be \
+                       'vm=<name-label or uuid>'. VMs can also be \
                        specified by filtering the full list of VMs on the values of fields. For \
                        example, specifying 'power-state=halted' will select all VMs whose \
                        power-state field is equal to 'halted'. Where multiple VMs are matching, \
@@ -46,7 +46,7 @@ let vmselectorsinfo = " The simplest way to select the VM on which the \
 let hostselectors = ["<host-selectors>"]
 let hostselectorsinfo = " The simplest way to select the host on which the \
                          operation is to be performed is by supplying the argument \
-                         'host=<name or uuid>'. Hosts can also be \
+                         'host=<name-label, hostname or uuid>'. Hosts can also be \
                          specified by filtering the full list of hosts on the values of fields. For \
                          example, specifying 'enabled=true' will select all hosts whose \
                          'enabled' field is equal to 'true'. Where multiple hosts are matching, \
@@ -59,7 +59,7 @@ let hostselectorsinfo = " The simplest way to select the host on which the \
 let srselectors = ["<sr-selectors>"]
 let srselectorsinfo = " The simplest way to select the SR on which the \
                        operation is to be performed is by supplying the argument \
-                       'sr=<name or uuid>'. SRs can also be \
+                       'sr=<name-label or uuid>'. SRs can also be \
                        specified by filtering the full list of hosts on the values of fields. For \
                        example, specifying 'enabled=true' will select all hosts whose \
                        'enabled' field is equal to 'true'. Where multiple SRs are matching, \
