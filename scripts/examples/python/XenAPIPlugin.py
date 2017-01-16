@@ -2,7 +2,10 @@
 
 # XenAPI python plugin boilerplate code
 
-import sys, xmlrpclib, XenAPI
+import sys
+import XenAPI
+
+import six.moves.xmlrpc_client as xmlrpclib
 
 class Failure(Exception):
     """Provide compatibilty with plugins written against XenServer 5.5 API"""
@@ -36,9 +39,9 @@ def dispatch(fn_table):
         except SystemExit:
             # SystemExit should not be caught, as it is handled elsewhere in the plugin system.
             raise
-        except Failure, e:
+        except Failure as e:
             print failure_message(e.params)
-        except Exception, e:
+        except Exception as e:
             print failure_message(['XENAPI_PLUGIN_FAILURE',
                                    methodname, e.__class__.__name__, str(e)])
     else:

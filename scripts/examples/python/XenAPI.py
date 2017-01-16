@@ -55,10 +55,11 @@
 # --------------------------------------------------------------------
 
 import gettext
-import xmlrpclib
-import httplib
 import socket
 import sys
+
+import six.moves.http_client as httplib
+import six.moves.xmlrpc_client as xmlrpclib
 
 translation = gettext.translation('xen-xm', fallback = True)
 
@@ -72,7 +73,7 @@ class Failure(Exception):
     def __str__(self):
         try:
             return str(self.details)
-        except Exception, exn:
+        except Exception as exn:
             import sys
             print >>sys.stderr, exn
             return "Xen-API failure: %s" % str(self.details)
