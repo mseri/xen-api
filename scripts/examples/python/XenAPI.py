@@ -99,8 +99,9 @@ class UDSHTTPConnection(httplib.HTTPConnection):
         self.sock.connect(path)
 
 
-class UDSHTTP(httplib.HTTP):
-    _connection_class = UDSHTTPConnection
+if not six.PY3:
+    class UDSHTTP(httplib.HTTP):
+        _connection_class = UDSHTTPConnection
 
 
 class UDSTransport(xmlrpclib.Transport):
