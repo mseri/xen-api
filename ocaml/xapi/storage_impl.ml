@@ -121,11 +121,17 @@ module Vdi = struct
   (** [superstate x] returns the actual state of the backing VDI by finding the "max" of
       	    the states from the clients' PsoV *)
   let superstate x = Vdi_automaton.superstate (List.map snd x.dps)
+  
+  let attach_info x = match x.attach_info with
+    | None -> "(Not attached)"
+    | Some x -> x.params
 
   let get_dp_state dp t =
     if List.mem_assoc dp t.dps
     then List.assoc dp t.dps
     else Vdi_automaton.Detached
+
+  let dp_on_vdi dp t = List.mem_assoc dp t.dps
 
   let set_dp_state dp state t =
     let rest = List.filter (fun (u, _) -> u <> dp) t.dps in
@@ -279,8 +285,12 @@ module Wrapper = functor(Impl: Server_impl) -> struct
       Mutex.execute locks_m (fun () -> Hashtbl.remove locks sr)
 
     let with_vdi sr vdi f =
+      debug "VDI.with_vdi start";
       let locks = locks_find sr in
-      Storage_locks.with_instance_lock locks vdi f
+      debug "VDI.with_vdi done locks_find sr";
+      let rv = Storage_locks.with_instance_lock locks vdi f in
+      debug "VDI.with_vdi done Storage_locks.with_instance_lock";
+      rv
 
     let with_all_vdis sr f =
       let locks = locks_find sr in
@@ -322,6 +332,7 @@ module Wrapper = functor(Impl: Server_impl) -> struct
       List.fold_left perform_one vdi_t ops
 
     let perform_nolock context ~dbg ~dp ~sr ~vdi this_op =
+      debug "perform_nolock start";
       match Host.find sr !Host.host with
       | None -> raise (Sr_not_attached sr)
       | Some sr_t ->
@@ -330,6 +341,7 @@ module Wrapper = functor(Impl: Server_impl) -> struct
           try
             (* Compute the overall state ('superstate') of the VDI *)
             let superstate = Vdi.superstate vdi_t in
+
             (* We first assume the operation succeeds and compute the new
                						   datapath+VDI state *)
             let new_vdi_t = Vdi.perform (Dp.make dp) this_op vdi_t in
@@ -339,7 +351,10 @@ module Wrapper = functor(Impl: Server_impl) -> struct
                						   superstate to superstate'. These may fail: if so we revert the
                						   datapath+VDI state to the most appropriate value. *)
             let ops = Vdi_automaton.(-) superstate superstate' in
-            side_effects context dbg dp sr sr_t vdi vdi_t ops
+	    debug "perform_nolock: About to call side_effects";
+            let rv = side_effects context dbg dp sr sr_t vdi vdi_t ops in
+            debug "perform_nolock: called side_effects";
+            rv
           with e ->
             let e = match e with Vdi_automaton.No_operation(a, b) -> Illegal_transition(a,b) | e -> e in
             Errors.add dp sr vdi (Printexc.to_string e);
@@ -368,6 +383,7 @@ module Wrapper = functor(Impl: Server_impl) -> struct
 
     (* Attempt to remove a possibly-active datapath associated with [vdi] *)
     let destroy_datapath_nolock context ~dbg ~dp ~sr ~vdi ~allow_leak =
+      debug "destroy_datapath_nolock start";
       match Host.find sr !Host.host with
       | None -> raise (Sr_not_attached sr)
       | Some sr_t ->
@@ -619,24 +635,80 @@ module Wrapper = functor(Impl: Server_impl) -> struct
         		    the resources associated with [dp] in [sr]. If [vdi_already_locked] then
         		    it is assumed that all VDIs are already locked. *)
     let destroy_sr context ~dbg ~dp ~sr ~sr_t ~allow_leak vdi_already_locked =
+      debug "DP.destroy_sr START";
       (* Every VDI in use by this session should be detached and deactivated *)
       let vdis = Sr.list sr_t in
-      List.fold_left (fun acc (vdi, vdi_t) ->
-          let locker =
-            if vdi_already_locked
-            then fun f -> f ()
-            else VDI.with_vdi sr vdi in
-          locker
-            (fun () ->
-               try
-                 VDI.destroy_datapath_nolock context ~dbg ~dp ~sr ~vdi ~allow_leak;								acc
-               with e -> e::acc
-            )) [] vdis
+      debug "[destroy_sr] Filtering VDIs";
+      let vdis_with_dp = List.filter (fun(vdi, vdi_t) -> Vdi.dp_on_vdi dp vdi_t) vdis in
+      debug "[destroy_sr] Filtered VDI count:%d" (List.length vdis_with_dp);
+      List.iter (fun(vdi, vdi_t) -> debug "[destroy_sr] VDI found with the dp is %s" vdi) vdis_with_dp;
+      
+      let locker vdi =
+        if vdi_already_locked
+          then fun f -> f ()
+          else VDI.with_vdi sr vdi in
 
+      (* This could be replaced by using List.find, but want to verify the assumption that List.Length = 0 or 1 *)
+      let vdi_to_remove = match vdis_with_dp with
+        | [] -> None
+        | [x] -> Some x
+        | _ -> (
+           debug "About to throw server errori (first). Expected 0 or 1 VDI with datapath, had %d" (List.length vdis_with_dp);
+           raise (Api_errors.Server_error (Api_errors.internal_error, [])); (* Will use more specific error *)
+         )
+      in
+
+      (* From this point if it didn't raise, the assumption of 0 or 1 VDIs holds *)
+
+      let failure = match vdi_to_remove with
+        | None -> None
+        | Some (vdi, vdi_t) -> (
+            locker vdi (fun () ->
+              try
+                VDI.destroy_datapath_nolock context ~dbg ~dp ~sr ~vdi ~allow_leak;
+                None
+              with e -> Some e
+            )
+          )
+      in       
+	
+      (* Assert that we removed the datapath from all VDIs by looking for a race where a VDI not known about has the datapath *)
+      (* Can't just check for vdis_with_dp = 0, must be async somewhere *)
+      let vdi_ident = match vdi_to_remove with
+        | None -> None
+        | Some (vdi, vdi_t) -> Some vdi
+      in
+
+      let vdis = Sr.list sr_t in
+      let vdis_with_dp = List.filter (fun(vdi, vdi_t) -> Vdi.dp_on_vdi dp vdi_t) vdis in
+      
+      (* Function to see if a (vdi, vdi_t) matches vdi_ident *)
+      let matches (vdi, vdi_t) = match vdi_ident with
+        | None -> false
+        | Some s -> vdi = s
+      in
+
+      let race_occured  =  match vdis_with_dp with 
+        | [] -> false
+        | [(vdi, vdi_t)] -> not (matches (vdi, vdi_t))
+        | _ -> true
+      in
+	  
+      if race_occured then(
+       	debug "[destroy_sr] About to throw server error. Race occured. Expected 0 new VDIs with DP after destroy_sr";
+        debug "[destroy_sr] VDI expected with id %s" (match vdi_ident with | None -> "(not attached)" | Some s -> s);
+        List.iter (fun(vdi, vdi_t) -> debug "[destroy_sr] VDI found with the dp is %s" vdi) vdis_with_dp;
+        raise (Api_errors.Server_error (Api_errors.internal_error, [])); (* Will use more specific error *)
+      );      
+
+      failure
 
     let destroy context ~dbg ~dp ~allow_leak =
       info "DP.destroy dbg:%s dp:%s allow_leak:%b" dbg dp allow_leak;
-      let failures = List.fold_left (fun acc (sr, sr_t) -> acc @ (destroy_sr context ~dbg ~dp ~sr ~sr_t ~allow_leak false)) [] (Host.list !Host.host) in
+      let failures = List.map (fun (sr, sr_t) -> destroy_sr context ~dbg ~dp ~sr ~sr_t ~allow_leak false) (Host.list !Host.host)
+                   |>List.filter(function | None -> false | Some x -> true)
+                   |>List.map(function | None -> assert false | Some x -> x) in
+
       match failures, allow_leak with
       | [], _  -> ()
       | f :: _, false ->
@@ -645,6 +717,7 @@ module Wrapper = functor(Impl: Server_impl) -> struct
       | _ :: _, true ->
         info "Forgetting leaked datapath: dp: %s" dp;
         ()
+
 
     let diagnostics context () =
       let srs = Host.list !Host.host in
@@ -773,7 +846,7 @@ module Wrapper = functor(Impl: Server_impl) -> struct
                   let dps = active_dps sr_t in
                   List.iter
                     (fun dp ->
-                       let ( _ : exn list) = DP.destroy_sr context ~dbg ~dp ~sr ~sr_t ~allow_leak:false true in ()
+                       let ( _ : exn option) = DP.destroy_sr context ~dbg ~dp ~sr ~sr_t ~allow_leak:false true in ()
                     ) dps;
                   let dps = active_dps sr_t in
                   if dps <> []
