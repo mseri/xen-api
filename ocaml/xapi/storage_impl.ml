@@ -122,10 +122,6 @@ module Vdi = struct
       	    the states from the clients' PsoV *)
   let superstate x = Vdi_automaton.superstate (List.map snd x.dps)
   
-  let attach_info x = match x.attach_info with
-    | None -> "(Not attached)"
-    | Some x -> x.params
-
   let get_dp_state dp t =
     if List.mem_assoc dp t.dps
     then List.assoc dp t.dps
@@ -285,12 +281,8 @@ module Wrapper = functor(Impl: Server_impl) -> struct
       Mutex.execute locks_m (fun () -> Hashtbl.remove locks sr)
 
     let with_vdi sr vdi f =
-      debug "VDI.with_vdi start";
       let locks = locks_find sr in
-      debug "VDI.with_vdi done locks_find sr";
-      let rv = Storage_locks.with_instance_lock locks vdi f in
-      debug "VDI.with_vdi done Storage_locks.with_instance_lock";
-      rv
+      Storage_locks.with_instance_lock locks vdi f
 
     let with_all_vdis sr f =
       let locks = locks_find sr in
@@ -332,7 +324,6 @@ module Wrapper = functor(Impl: Server_impl) -> struct
       List.fold_left perform_one vdi_t ops
 
     let perform_nolock context ~dbg ~dp ~sr ~vdi this_op =
-      debug "perform_nolock start";
       match Host.find sr !Host.host with
       | None -> raise (Sr_not_attached sr)
       | Some sr_t ->
@@ -341,7 +332,6 @@ module Wrapper = functor(Impl: Server_impl) -> struct
           try
             (* Compute the overall state ('superstate') of the VDI *)
             let superstate = Vdi.superstate vdi_t in
-
             (* We first assume the operation succeeds and compute the new
                						   datapath+VDI state *)
             let new_vdi_t = Vdi.perform (Dp.make dp) this_op vdi_t in
@@ -351,10 +341,7 @@ module Wrapper = functor(Impl: Server_impl) -> struct
                						   superstate to superstate'. These may fail: if so we revert the
                						   datapath+VDI state to the most appropriate value. *)
             let ops = Vdi_automaton.(-) superstate superstate' in
-	    debug "perform_nolock: About to call side_effects";
-            let rv = side_effects context dbg dp sr sr_t vdi vdi_t ops in
-            debug "perform_nolock: called side_effects";
-            rv
+            side_effects context dbg dp sr sr_t vdi vdi_t ops
           with e ->
             let e = match e with Vdi_automaton.No_operation(a, b) -> Illegal_transition(a,b) | e -> e in
             Errors.add dp sr vdi (Printexc.to_string e);
@@ -383,7 +370,6 @@ module Wrapper = functor(Impl: Server_impl) -> struct
 
     (* Attempt to remove a possibly-active datapath associated with [vdi] *)
     let destroy_datapath_nolock context ~dbg ~dp ~sr ~vdi ~allow_leak =
-      debug "destroy_datapath_nolock start";
       match Host.find sr !Host.host with
       | None -> raise (Sr_not_attached sr)
       | Some sr_t ->
@@ -635,10 +621,8 @@ module Wrapper = functor(Impl: Server_impl) -> struct
         		    the resources associated with [dp] in [sr]. If [vdi_already_locked] then
         		    it is assumed that all VDIs are already locked. *)
     let destroy_sr context ~dbg ~dp ~sr ~sr_t ~allow_leak vdi_already_locked =
-      debug "DP.destroy_sr START";
       (* Every VDI in use by this session should be detached and deactivated *)
       let vdis = Sr.list sr_t in
-      debug "[destroy_sr] Filtering VDIs";
       let vdis_with_dp = List.filter (fun(vdi, vdi_t) -> Vdi.dp_on_vdi dp vdi_t) vdis in
       debug "[destroy_sr] Filtered VDI count:%d" (List.length vdis_with_dp);
       List.iter (fun(vdi, vdi_t) -> debug "[destroy_sr] VDI found with the dp is %s" vdi) vdis_with_dp;
@@ -717,7 +701,6 @@ module Wrapper = functor(Impl: Server_impl) -> struct
       | _ :: _, true ->
         info "Forgetting leaked datapath: dp: %s" dp;
         ()
-
 
     let diagnostics context () =
       let srs = Host.list !Host.host in
