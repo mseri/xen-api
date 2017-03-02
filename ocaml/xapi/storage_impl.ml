@@ -644,7 +644,7 @@ module Wrapper = functor(Impl: Server_impl) -> struct
         | [] -> None
         | [x] -> Some x
         | _ -> 
-           raise (Storage_interface.Backend_error (Api_errors.internal_error, [Printf.sprintf "Expected 0 or 1 VDI with datapath, had %d" 1]));
+           raise (Storage_interface.Backend_error (Api_errors.internal_error, [Printf.sprintf "Expected 0 or 1 VDI with datapath, had %d" (List.length vdis_with_dp)]));
       in
 
       (* From this point if it didn't raise, the assumption of 0 or 1 VDIs holds *)
