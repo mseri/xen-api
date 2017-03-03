@@ -68,6 +68,7 @@
 open Stdext
 open Threadext
 open Pervasiveext
+open Listext
 open Fun
 open Storage_interface
 open Storage_task
@@ -693,9 +694,7 @@ module Wrapper = functor(Impl: Server_impl) -> struct
     let destroy context ~dbg ~dp ~allow_leak =
       info "DP.destroy dbg:%s dp:%s allow_leak:%b" dbg dp allow_leak;
       let failures = Host.list !Host.host
-		   |>List.map (fun (sr, sr_t) -> destroy_sr context ~dbg ~dp ~sr ~sr_t ~allow_leak false)
-                   |>List.filter((<>) None)
-                   |>List.map(function | None -> assert false | Some x -> x) in
+		   |>List.filter_map (fun (sr, sr_t) -> destroy_sr context ~dbg ~dp ~sr ~sr_t ~allow_leak false) in
 
       match failures, allow_leak with
       | [], _  -> ()
