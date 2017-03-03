@@ -678,7 +678,7 @@ module Wrapper = functor(Impl: Server_impl) -> struct
 
       let race_occured  =  match vdis_with_dp with 
         | [] -> false
-        | [(vdi, vdi_t)] -> not (matches (vdi, vdi_t))
+        | [v] -> not (matches v)
         | _ -> true
       in
 	  
@@ -692,8 +692,9 @@ module Wrapper = functor(Impl: Server_impl) -> struct
 
     let destroy context ~dbg ~dp ~allow_leak =
       info "DP.destroy dbg:%s dp:%s allow_leak:%b" dbg dp allow_leak;
-      let failures = List.map (fun (sr, sr_t) -> destroy_sr context ~dbg ~dp ~sr ~sr_t ~allow_leak false) (Host.list !Host.host)
-                   |>List.filter(function | None -> false | Some x -> true)
+      let failures = Host.list !Host.host
+		   |>List.map (fun (sr, sr_t) -> destroy_sr context ~dbg ~dp ~sr ~sr_t ~allow_leak false)
+                   |>List.filter((<>) None)
                    |>List.map(function | None -> assert false | Some x -> x) in
 
       match failures, allow_leak with
