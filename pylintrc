@@ -8,8 +8,19 @@
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use"--disable=all --enable=classes
 # --disable=W"
-disable=similarities
-
+disable=
+    global-statement,
+    invalid-name,
+    line-too-long,
+    missing-docstring,
+    similarities,
+    too-few-public-methods,
+    too-many-statements,
+    too-many-arguments,
+    too-many-branches,
+    too-many-locals,
+    too-many-public-methods,
+    too-many-return-statements
 
 [REPORTS]
 
