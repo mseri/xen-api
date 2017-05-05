@@ -22,10 +22,12 @@ SHORT_COMMAND_NAME = os.path.basename(COMMAND_NAME)
 XE_SERIAL = 'xe-serial'
 XEN_CMDLINE = '/opt/xensource/libexec/xen-cmdline'
 
+
 def send_to_syslog(msg):
     """ Send a message to syslog. """
     pid = os.getpid()
-    syslog.syslog("%s[%d] - %s" %(SHORT_COMMAND_NAME, pid, msg))
+    syslog.syslog("%s[%d] - %s" % (SHORT_COMMAND_NAME, pid, msg))
+
 
 def doexec(args):
     """Execute a subprocess, then return its return code, stdout and stderr"""
@@ -41,6 +43,7 @@ def doexec(args):
     stderr = proc.stderr
     return (rc, stdout, stderr)
 
+
 def disable(bootloader):
     """
         Configure the host not to output its console to the physical display on
@@ -52,6 +55,7 @@ def disable(bootloader):
         doexec([XEN_CMDLINE, "--delete-dom0", "console=tty0"])
         doexec([XEN_CMDLINE, "--delete-xen", "console"])
 
+
 def enable(bootloader):
     """
         Configure the host to output its console to the physical display on
@@ -62,6 +66,7 @@ def enable(bootloader):
     else:
         doexec([XEN_CMDLINE, "--set-xen", "console=vga"])
         doexec([XEN_CMDLINE, "--set-dom0", "console=tty0"])
+
 
 def status(_):
     """
@@ -80,12 +85,14 @@ COMMANDS = {
     'status': status
 }
 
+
 def usage():
     """ Display a usage string. """
     command_names = COMMANDS.keys()
     command_names.sort()
     print "Usage:"
     print "    %s {%s}" % (sys.argv[0], '|'.join(command_names))
+
 
 def main():
     """ Program entry point. """

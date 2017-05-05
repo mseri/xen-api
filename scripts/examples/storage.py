@@ -18,7 +18,10 @@
 
 # WARNING: this API is considered to be unstable and may be changed at-will
 
-import os, sys, commands, json
+import os
+import sys
+import commands
+import json
 
 import smapiv2
 from smapiv2 import log, start, BackendError, Vdi_does_not_exist
@@ -27,17 +30,22 @@ root = "/sr/"
 
 # [run task cmd] executes [cmd], throwing a BackendError if exits with
 # a non-zero exit code.
+
+
 def run(task, cmd):
     code, output = commands.getstatusoutput(cmd)
     if code <> 0:
         log("%s: %s exitted with code %d: %s" % (task, cmd, code, output))
-        raise (BackendError("command failed", [ str(code), output ]))
+        raise (BackendError("command failed", [str(code), output]))
     log("%s: %s" % (task, cmd))
     return output
 
 # Use Linux "losetup" to create block devices from files
+
+
 class Loop:
     # [_find task path] returns the loop device associated with [path]
+
     def _find(self, task, path):
         global root
         for line in run(task, "losetup -a").split("\n"):
@@ -50,17 +58,22 @@ class Loop:
                     return loop
         return None
     # [add task path] creates a new loop device for [path] and returns it
+
     def add(self, task, path):
         run(task, "losetup -f %s" % path)
         return self._find(task, path)
     # [remove task path] removes the loop device associated with [path]
+
     def remove(self, task, path):
         loop = self._find(task, path)
         run(task, "losetup -d %s" % loop)
 
 # Use FreeBSD "mdconfig" to create block devices from files
+
+
 class Mdconfig:
     # [_find task path] returns the unit (mdX) associated with [path]
+
     def _find(self, task, path):
         # md0	vnode	 1024M	/root/big.img
         for line in run(task, "mdconfig -l -v").split("\n"):
@@ -69,19 +82,23 @@ class Mdconfig:
             bits = line.split()
             this_path = bits[3]
             if this_path == path:
-                return bits[0] # md0
+                return bits[0]  # md0
         return None
     # [add task path] returns a block device associated with [path]
+
     def add(self, task, path):
         return "/dev/" + run(task, "mdconfig -a -t vnode -f %s" % path)
     # [remove task path] removes the block device associated with [path]
+
     def remove(self, task, path):
         md = self._find(task, path)
         if md:
-            run(task, "mdconfig -d -u %s" % md) 
+            run(task, "mdconfig -d -u %s" % md)
 
 # [path_of_vdi vdi] returns the path in the local filesystem corresponding
 # to vdi location [vdi]
+
+
 def path_of_vdi(vdi):
     global root
     return root + vdi
@@ -89,28 +106,33 @@ def path_of_vdi(vdi):
 disk_suffix = ".raw"
 metadata_suffix = ".json"
 
+
 class RawFiles:
+
     def __init__(self, device):
         self.device = device
 
     def query(self):
-        return { "name": "RawFiles",
-                 "vendor": "XCP",
-                 "version": "0.1",
-                 "features": [ smapiv2.feature_vdi_create,
-                               smapiv2.feature_vdi_destroy,
-                               smapiv2.feature_vdi_attach,
-                               smapiv2.feature_vdi_detach,
-                               smapiv2.feature_vdi_activate,
-                               smapiv2.feature_vdi_deactivate ] }
+        return {"name": "RawFiles",
+                "vendor": "XCP",
+                "version": "0.1",
+                "features": [smapiv2.feature_vdi_create,
+                             smapiv2.feature_vdi_destroy,
+                             smapiv2.feature_vdi_attach,
+                             smapiv2.feature_vdi_detach,
+                             smapiv2.feature_vdi_activate,
+                             smapiv2.feature_vdi_deactivate]}
 
     def sr_attach(self, task, sr, device_config):
         if not(os.path.exists(root)):
-            raise BackendError("SR directory doesn't exist", [ root ])
+            raise BackendError("SR directory doesn't exist", [root])
+
     def sr_detach(self, task, sr):
         pass
+
     def sr_destroy(self, task, sr):
         pass
+
     def sr_scan(self, task, sr):
         global root
         log("scanning")
@@ -128,7 +150,8 @@ class RawFiles:
 
     def vdi_create(self, task, sr, vdi_info, params):
         filename = run(task, "uuidgen")
-        run(task, "dd if=/dev/zero of=%s%s bs=1 count=0 seek=%s" % (path_of_vdi(filename), disk_suffix, vdi_info["virtual_size"]))
+        run(task, "dd if=/dev/zero of=%s%s bs=1 count=0 seek=%s" %
+            (path_of_vdi(filename), disk_suffix, vdi_info["virtual_size"]))
         vdi_info["vdi"] = filename
         f = open(path_of_vdi(filename) + metadata_suffix, "w")
         try:
@@ -136,6 +159,7 @@ class RawFiles:
         finally:
             f.close()
             return vdi_info
+
     def vdi_destroy(self, task, sr, vdi):
         if not (os.path.exists(path_of_vdi(vdi) + disk_suffix)):
             raise Vdi_does_not_exist(vdi)
@@ -150,20 +174,26 @@ class RawFiles:
 
     def vdi_activate(self, task, dp, sr, vdi):
         pass
+
     def vdi_deactivate(self, task, dp, sr, vdi):
         pass
+
     def vdi_detach(self, task, dp, sr, vdi):
         path = path_of_vdi(vdi) + disk_suffix
         self.device.remove(task, path)
-        
+
 if __name__ == "__main__":
     from optparse import OptionParser
 
     parser = OptionParser()
-    parser.add_option("-l", "--log", dest="logfile", help="log to LOG", metavar="LOG")
-    parser.add_option("-p", "--port", dest="port", help="listen on PORT", metavar="PORT")
-    parser.add_option("-i", "--ip-addr", dest="ip", help="listen on IP", metavar="IP")
-    parser.add_option("-d", "--daemon", action="store_true", dest="daemon", help="run as a background daemon", metavar="DAEMON")
+    parser.add_option("-l", "--log", dest="logfile",
+                      help="log to LOG", metavar="LOG")
+    parser.add_option("-p", "--port", dest="port",
+                      help="listen on PORT", metavar="PORT")
+    parser.add_option("-i", "--ip-addr", dest="ip",
+                      help="listen on IP", metavar="IP")
+    parser.add_option("-d", "--daemon", action="store_true", dest="daemon",
+                      help="run as a background daemon", metavar="DAEMON")
     (options, args) = parser.parse_args()
     if options.logfile:
         from smapiv2 import reopenlog

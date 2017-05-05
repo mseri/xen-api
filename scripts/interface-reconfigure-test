@@ -10,7 +10,8 @@
 # VLAN devices for you.
 
 import XenAPI
-import sys, os
+import sys
+import os
 import getopt
 
 #/* Standard interface flags (netdevice->flags). */
@@ -24,31 +25,40 @@ bond_vlans = None
 slaves = None
 slave_vlans = {}
 
+
 class Usage(Exception):
+
     def __init__(self, msg):
         Exception.__init__(self)
         self.msg = msg
+
 
 class Error(Exception):
+
     def __init__(self, msg):
         Exception.__init__(self)
         self.msg = msg
 
+
 class Failure(Exception):
+
     def __init__(self):
         Exception.__init__(self)
         #self.msg = "FAIL: " + test + "\n"
-        #for m in msg:
+        # for m in msg:
         #    self.msg = self.msg + "FAIL: " + m + "\n"
+
 
 def get_current_host():
     f = open("@INVENTORY@")
-    hosts = [h.strip() for h in f.readlines() if h.startswith("INSTALLATION_UUID=")]
+    hosts = [h.strip()
+             for h in f.readlines() if h.startswith("INSTALLATION_UUID=")]
     f.close()
 
-    hosts = [l[len("INSTALLATION_UUID='"):len(l)-1] for l in hosts]
+    hosts = [l[len("INSTALLATION_UUID='"):len(l) - 1] for l in hosts]
 
     return session.xenapi.host.get_by_uuid(hosts[0])
+
 
 def interface_name(pif):
     """Construct an interface name from the given PIF record."""
@@ -60,6 +70,7 @@ def interface_name(pif):
     else:
         return "%(device)s.%(VLAN)s" % pifrec
 
+
 def get_pif_by_uuid(uuid):
     try:
         pif = session.xenapi.PIF.get_by_uuid(uuid)
@@ -68,29 +79,34 @@ def get_pif_by_uuid(uuid):
 
     return pif
 
+
 def get_bond_slaves_of_pif(pif):
     pifrec = session.xenapi.PIF.get_record(pif)
 
     bmo = pifrec['bond_master_of']
     if len(bmo) > 1:
         raise Error("Bond-master-of contains too many elements")
-    
+
     if len(bmo) == 0:
         return []
     else:
         bondrec = session.xenapi.Bond.get_record(bmo[0])
         return bondrec['slaves']
 
+
 def get_vlans_of_pif(pif):
     """Returns a list of PIFs which are VLANs on top of the given pif."""
-    
+
     pifrec = session.xenapi.PIF.get_record(pif)
-    
+
     return [session.xenapi.VLAN.get_record(v)['untagged_PIF'] for v in pifrec['VLAN_slave_of']]
 
+
 class Test(object):
+
     def __init__(self, test_name):
         self.__test_name = test_name
+
     def name(self):
         return self.__test_name
 
@@ -100,9 +116,11 @@ class Test(object):
         path = os.path.join("/sys/class/net", rec['interface-name'])
         if os.path.isdir(path) != exists:
             if exists:
-                self.fail(["PIF device %(uuid)s/%(interface-name)s does not exist" % rec])
+                self.fail(
+                    ["PIF device %(uuid)s/%(interface-name)s does not exist" % rec])
             else:
-                self.fail(["PIF device %(uuid)s/%(interface-name)s exists" % rec])
+                self.fail(
+                    ["PIF device %(uuid)s/%(interface-name)s exists" % rec])
 
     def __assert_device_bridge(self, pif, exists):
         rec = session.xenapi.PIF.get_record(pif)
@@ -110,40 +128,45 @@ class Test(object):
         path = os.path.join("/sys/class/net", bridge)
         if os.path.isdir(path) != exists:
             if exists:
-                self.fail([("PIF %(uuid)s/%(device)s bridge " % rec) + bridge + " does not exist"])
+                self.fail([("PIF %(uuid)s/%(device)s bridge " %
+                            rec) + bridge + " does not exist"])
             else:
-                self.fail([("PIF %(uuid)s/%(device)s bridge " % rec) + bridge + " exists"])
+                self.fail([("PIF %(uuid)s/%(device)s bridge " %
+                            rec) + bridge + " exists"])
 
     def __assert_device_attached(self, pif, attached):
         rec = session.xenapi.PIF.get_record(pif)
         rec['interface-name'] = interface_name(pif)
-        
+
         if attached != rec['currently_attached']:
             if attached:
-                self.fail(["PIF device %(uuid)s/%(interface-name)s is not currently attached" % rec])
+                self.fail(
+                    ["PIF device %(uuid)s/%(interface-name)s is not currently attached" % rec])
             else:
-                self.fail(["PIF device %(uuid)s/%(interface-name)s is currently attached" % rec])
+                self.fail(
+                    ["PIF device %(uuid)s/%(interface-name)s is currently attached" % rec])
 
     def __assert_device_up(self, pif, up):
         rec = session.xenapi.PIF.get_record(pif)
         rec['interface-name'] = interface_name(pif)
 
         path = os.path.join("/sys/class/net", rec['interface-name'], "flags")
-        
+
         if not os.path.exists(path):
             current_state = False
             if not up:
                 return
         else:
             f = open(path)
-            flags = int(f.readline().strip(),0)
+            flags = int(f.readline().strip(), 0)
             f.close()
 
             current_state = (flags & IFF_UP) == IFF_UP
             if current_state == up:
                 return
 
-        self.fail([("PIF %(uuid)s/%(interface-name)s " % rec) + ("in state %s not %s" % (current_state, up))])
+        self.fail([("PIF %(uuid)s/%(interface-name)s " % rec) +
+                   ("in state %s not %s" % (current_state, up))])
 
     def assert_device_state(self, pif, attached=None, up=None, bridge=None):
         """Confirms that the device state is as expected.
@@ -161,7 +184,7 @@ underlying a VLAN."""
 
         if up is not None:
             self.__assert_device_up(pif, up)
-            
+
         if bridge is not None:
             self.__assert_device_bridge(pif, bridge)
 
@@ -171,12 +194,13 @@ underlying a VLAN."""
         path = os.path.join("/sys/class/net", rec['device'], "master")
         if os.path.islink(path):
             m = os.readlink(path)
-            m = m[m.rfind("/")+1:]
+            m = m[m.rfind("/") + 1:]
         else:
             m = None
 
         if m != master:
-            self.fail([("PIF operstate %(uuid)s/%(device)s " % rec) + "enslaved to %s expected %s" % (m, master)])
+            self.fail([("PIF operstate %(uuid)s/%(device)s " %
+                        rec) + "enslaved to %s expected %s" % (m, master)])
 
     def attach_pif(self, pif):
         rec = session.xenapi.PIF.get_record(pif)
@@ -200,45 +224,50 @@ underlying a VLAN."""
 
     def run(self):
         pass
-        #print "TEST: " + self.__test_name
+        # print "TEST: " + self.__test_name
+
     def log(self, s):
         print self.__test_name + ": " + s
-        
+
     def success(self):
         self.log("PASS")
         print ""
+
     def fail(self, msg):
         for m in msg:
             self.log("FAIL: " + m)
         raise Failure()
 
+
 class Test_start_of_day(Test):
     """Ensure sane starting environment.
 
     Checks that all slaves are not enslaved and that bond device has not been created."""
-    
+
     def __init__(self):
         Test.__init__(self, "start-of-day")
 
     def run(self):
         Test.run(self)
-        all = [bond] + bond_vlans + slaves            
-        all = [(pif,session.xenapi.PIF.get_record(pif)) for pif in all]
+        all = [bond] + bond_vlans + slaves
+        all = [(pif, session.xenapi.PIF.get_record(pif)) for pif in all]
 
         self.log("interfaces on correct host")
-        for rec in [rec for (_,rec) in all if rec['host'] != host]:
+        for rec in [rec for (_, rec) in all if rec['host'] != host]:
             self.fail(["PIF %(uuid)s/%(device)s is not on correct host" % rec])
-        
+
         self.log("no management interface involved in test")
-        for (_,rec) in all:
+        for (_, rec) in all:
             if rec['management']:
-                self.fail(["PIF %(uuid)s/%(device)s is management interface" % rec, \
+                self.fail(["PIF %(uuid)s/%(device)s is management interface" % rec,
                            "Cannot run test against management interface"])
 
         self.log("slaves devices exist, are detached and unenslaved")
-        #for (pif,_) in [(pif,session.xenapi.PIF.get_record(pif)) for pif in slaves]:
+        # for (pif,_) in [(pif,session.xenapi.PIF.get_record(pif)) for pif in
+        # slaves]:
         for pif in slaves:
-            self.assert_device_state(pif, attached=False, up=False, bridge=False)
+            self.assert_device_state(
+                pif, attached=False, up=False, bridge=False)
             self.assert_device_is_enslaved(pif, None)
 
         self.log("bond is detached and device does not exist")
@@ -249,10 +278,12 @@ class Test_start_of_day(Test):
         all_vlans = bond_vlans
         [all_vlans.extend(v) for v in slave_vlans.values()]
         for vlan in all_vlans:
-            self.assert_device_state(vlan, attached=False, up=False, bridge=False)
+            self.assert_device_state(
+                vlan, attached=False, up=False, bridge=False)
             self.assert_device_exists(vlan, False)
 
         self.success()
+
 
 class Test_device_attach(Test):
     """Ensure we can attach a basic device."""
@@ -264,13 +295,14 @@ class Test_device_attach(Test):
         Test.run(self)
 
         dev = slaves[0]
-        
+
         self.attach_pif(dev)
         self.assert_device_state(dev, attached=True, up=True, bridge=True)
-        self.detach_pif(dev)        
+        self.detach_pif(dev)
         self.assert_device_state(dev, attached=False, up=False, bridge=False)
-        
+
         self.success()
+
 
 class Test_vlan_attach(Test):
     """Ensure we can attach a VLAN device."""
@@ -288,13 +320,14 @@ class Test_vlan_attach(Test):
         self.assert_device_state(dev, attached=False, up=True, bridge=True)
         # bridge is there as a side-effect but don't really care.
         self.assert_device_state(vlan, attached=True, up=True, bridge=None)
-        
+
         self.detach_pif(vlan)
         self.assert_device_exists(vlan, False)
         self.assert_device_state(dev, attached=False, up=False, bridge=False)
         self.assert_device_state(vlan, attached=False, up=False, bridge=False)
-        
+
         self.success()
+
 
 class Test_bond_attach(Test):
     """Ensure we can attach a basic bond."""
@@ -308,11 +341,12 @@ class Test_bond_attach(Test):
         self.attach_pif(bond)
         self.assert_device_exists(bond, True)
         self.assert_device_state(bond, attached=True, up=True, bridge=True)
-        
+
         # Ensure slaves are enslaved and up
         dev = session.xenapi.PIF.get_record(bond)['device']
         for slave in slaves:
-            self.assert_device_state(slave, attached=False, up=True, bridge=False)
+            self.assert_device_state(
+                slave, attached=False, up=True, bridge=False)
             self.assert_device_is_enslaved(slave, dev)
 
         self.detach_pif(bond)
@@ -320,10 +354,12 @@ class Test_bond_attach(Test):
         self.assert_device_state(bond, attached=False, up=False, bridge=False)
         # Ensure slaves are unenslaved and down
         for slave in slaves:
-            self.assert_device_state(slave, attached=False, up=False, bridge=False)
+            self.assert_device_state(
+                slave, attached=False, up=False, bridge=False)
             self.assert_device_is_enslaved(slave, None)
 
         self.success()
+
 
 class Test_bond_vlan_attach(Test):
     """Ensure we can attach a VLAN bond device."""
@@ -333,20 +369,21 @@ class Test_bond_vlan_attach(Test):
 
     def run(self):
         Test.run(self)
-        
+
         vlan = bond_vlans[0]
 
         self.attach_pif(vlan)
         self.assert_device_state(vlan, attached=True, up=True, bridge=True)
         self.assert_device_state(bond, attached=False, up=True, bridge=None)
-        
+
         self.detach_pif(vlan)
         self.assert_device_state(bond, attached=False, up=False, bridge=False)
         self.assert_device_state(vlan, attached=False, up=False, bridge=False)
         self.assert_device_exists(vlan, False)
 
         self.success()
-        
+
+
 class Test_switch_bond_to_slave(Test):
     """Ensure we can switch from a bond to one of its slaves."""
 
@@ -361,12 +398,14 @@ class Test_switch_bond_to_slave(Test):
         self.assert_device_state(bond, attached=True, up=True, bridge=True)
         dev = session.xenapi.PIF.get_record(bond)['device']
         for slave in slaves:
-            self.assert_device_state(slave, attached=False, up=True, bridge=False)
+            self.assert_device_state(
+                slave, attached=False, up=True, bridge=False)
             self.assert_device_is_enslaved(slave, dev)
 
-        # Switch to a slave 
+        # Switch to a slave
         self.attach_pif(slaves[0])
-        self.assert_device_state(slaves[0], attached=True, up=True, bridge=True)
+        self.assert_device_state(
+            slaves[0], attached=True, up=True, bridge=True)
         # ... confirm that device is no longer enslaved to the bond
         self.assert_device_is_enslaved(slaves[0], None)
         # ... confirm that bond is detached and device does not exist
@@ -384,7 +423,8 @@ class Test_switch_bond_to_slave(Test):
         self.assert_device_state(bond, attached=True, up=True, bridge=True)
         dev = session.xenapi.PIF.get_record(bond)['device']
         for slave in slaves:
-            self.assert_device_state(slave, attached=False, up=True, bridge=False)
+            self.assert_device_state(
+                slave, attached=False, up=True, bridge=False)
             self.assert_device_is_enslaved(slave, dev)
 
         # Clean up
@@ -392,10 +432,12 @@ class Test_switch_bond_to_slave(Test):
         self.assert_device_state(bond, attached=False, up=False, bridge=False)
         self.assert_device_exists(bond, False)
         for slave in slaves:
-            self.assert_device_state(slave, attached=False, up=False, bridge=False)
+            self.assert_device_state(
+                slave, attached=False, up=False, bridge=False)
             self.assert_device_is_enslaved(slave, None)
 
         self.success()
+
 
 class Test_vlan_master_attach(Test):
     """Check VLAN master behaviour on slave detach.
@@ -466,19 +508,22 @@ is attached and detached.
         self.detach_pif(vlan)
         self.assert_device_state(dev,  attached=False, up=False, bridge=False)
         self.assert_device_state(vlan, attached=False, up=False, bridge=False)
-        
+
         self.success()
+
 
 def cleanup():
     if bond == None or slaves == None:
         return
-    
-    all = [(pif, session.xenapi.PIF.get_record(pif)) for pif in [bond] + slaves]
 
-    for (pif, rec) in [(pif,rec) for (pif,rec) in all if rec['currently_attached']]:
+    all = [(pif, session.xenapi.PIF.get_record(pif))
+           for pif in [bond] + slaves]
+
+    for (pif, rec) in [(pif, rec) for (pif, rec) in all if rec['currently_attached']]:
         print "cleanup: unplug %(uuid)s %(device)s" % rec
         session.xenapi.PIF.unplug(pif)
-        
+
+
 def main(argv=None):
     global host
     global bond
@@ -487,7 +532,7 @@ def main(argv=None):
     global slave_vlans
     All_Tests = []
     selected_tests = []
-    
+
     All_Tests.append(Test_device_attach())
     All_Tests.append(Test_vlan_attach())
     All_Tests.append(Test_bond_attach())
@@ -501,7 +546,7 @@ def main(argv=None):
 
         try:
             shortops = "ht:"
-            longops = [ "help" ]
+            longops = ["help"]
             arglist, args = getopt.gnu_getopt(argv[1:], shortops, longops)
         except getopt.GetoptError, msg:
             raise Usage(msg)
@@ -539,14 +584,14 @@ def main(argv=None):
             print " vlan%(VLAN)s %(uuid)s %(device)s" % session.xenapi.PIF.get_record(vlan)
         if len(bond_vlans) == 0:
             raise Error("bond has no vlans")
-        
+
         slaves = get_bond_slaves_of_pif(bond)
         for slave in slaves:
             print " slave %(uuid)s %(device)s" % session.xenapi.PIF.get_record(slave)
             slave_vlans[slave] = get_vlans_of_pif(slave)
             for vlan in slave_vlans[slave]:
                 print "   vlan%(VLAN)s %(uuid)s %(device)s" % session.xenapi.PIF.get_record(vlan)
-                #if len(bond_vlans) == 0:
+                # if len(bond_vlans) == 0:
                 #    raise Error("bond has no vlans")
         if len(slaves) == 0:
             raise Error("bond has no slaves")
@@ -558,15 +603,15 @@ def main(argv=None):
         print ""
 
         Test_start_of_day().run()
-        
+
         if selected_tests == []:
             selected_tests = All_Tests
 
         for test in selected_tests:
             test.run()
-            
+
     except Failure, err:
-        #print "FAILED"
+        # print "FAILED"
         cleanup()
         return 1
     except Usage, err:
@@ -581,9 +626,10 @@ def main(argv=None):
 if __name__ == "__main__":
     try:
         session = XenAPI.xapi_local()
-        session.xenapi.login_with_password("root", "", "1.0", "xen-api-scripts-interface-reconfig-test")
+        session.xenapi.login_with_password(
+            "root", "", "1.0", "xen-api-scripts-interface-reconfig-test")
         rc = main()
     finally:
         session.xenapi.session.logout()
-        
+
     sys.exit(rc)

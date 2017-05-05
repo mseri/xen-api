@@ -1,20 +1,20 @@
 # Simple functions to read the constants from the xensource-inventory file
 
-INVENTORY="@INVENTORY@"
-INSTALLATION_UUID="INSTALLATION_UUID"
+INVENTORY = "@INVENTORY@"
+INSTALLATION_UUID = "INSTALLATION_UUID"
 
 
 def read_kvpairs(filename):
-   """Read in a file of key-value pairs in the format used by the inventory file"""
-   f = open(filename)
-   all_entries = {}
-   try:
+    """Read in a file of key-value pairs in the format used by the inventory file"""
+    f = open(filename)
+    all_entries = {}
+    try:
         for line in f.readlines():
-            equals = line.index("=")    
+            equals = line.index("=")
             key = line[0:equals]
-            value = line[equals+1:].strip().strip("'")
+            value = line[equals + 1:].strip().strip("'")
             all_entries[key] = value
-   finally:
+    finally:
         f.close()
         return all_entries
 
@@ -22,7 +22,7 @@ def read_kvpairs(filename):
 def parse():
     """Return the contents of the xensource inventory file as a dictionary"""
     try:
-        return read_kvpairs(INVENTORY)  
+        return read_kvpairs(INVENTORY)
     except:
         return {}
 

@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 
-# Send back-to-back 'Host.get_servertime' calls to simulate the GUI's heartbeat and record latency.
+# Send back-to-back 'Host.get_servertime' calls to simulate the GUI's
+# heartbeat and record latency.
 
-import XenAPI, sys, time
+import XenAPI
+import sys
+import time
 
 iso8601 = "%Y%m%dT%H:%M:%SZ"
+
 
 def main(session):
     global iso8601
@@ -28,14 +32,14 @@ if __name__ == "__main__":
     url = sys.argv[1]
     if url[:5] <> "https":
         raise "Must use SSL for a realistic test"
-    
+
     username = sys.argv[2]
     password = sys.argv[3]
-    
+
     session = XenAPI.Session(url)
-    session.xenapi.login_with_password(username, password, "1.0", "xen-api-scripts-pingmaster.py")
+    session.xenapi.login_with_password(
+        username, password, "1.0", "xen-api-scripts-pingmaster.py")
     try:
         main(session)
     finally:
         session.xenapi.logout()
-        

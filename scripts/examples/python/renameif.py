@@ -15,10 +15,14 @@
 
 # Allow the user to change the MAC address -> interface mapping
 
-import XenAPI, inventory, sys
+import XenAPI
+import inventory
+import sys
+
 
 def warn(txt):
     print >> sys.stderr, txt
+
 
 def show_pifs(pifs):
     print "NIC MAC               Notes"
@@ -29,15 +33,17 @@ def show_pifs(pifs):
             notes.append("management interface")
         nic = pifs[ref]['device'][3:]
         try:
-            metrics = session.xenapi.PIF_metrics.get_record(session.xenapi.PIF.get_metrics(ref))
+            metrics = session.xenapi.PIF_metrics.get_record(
+                session.xenapi.PIF.get_metrics(ref))
             if metrics['carrier']:
                 notes.append("carrier detected")
             else:
                 notes.append("no carrier detected")
         except:
             pass
-                
+
         print "%3s %s %s" % (nic, pifs[ref]['MAC'], ", ".join(notes))
+
 
 def select(pifs, key):
     """Select a PIF by device name or MAC"""
@@ -47,6 +53,7 @@ def select(pifs, key):
         if pifs[ref]['MAC'].upper() == key.upper():
             return ref
     return None
+
 
 def save(session, host, pifs):
     """Commit changes"""
@@ -81,9 +88,9 @@ def save(session, host, pifs):
         uuid = session.xenapi.VM.get_uuid(vm)
         print "Hot-unplugging interface %s on VM %s" % (dev, uuid)
         session.xenapi.VIF.unplug(vif)
-        
+
     for ref in pifs.keys():
-        mac = pifs[ref]['MAC']        
+        mac = pifs[ref]['MAC']
         if pifs[ref]['management']:
             print "Disabling management NIC (%s)" % mac
             session.xenapi.host.management_disable()
@@ -97,7 +104,8 @@ def save(session, host, pifs):
         gateway = pifs[ref]['gateway']
         DNS = pifs[ref]['DNS']
         new_ref = session.xenapi.PIF.introduce(host, mac, device)
-        session.xenapi.PIF.reconfigure_ip(new_ref, mode, IP, netmask, gateway, DNS)
+        session.xenapi.PIF.reconfigure_ip(
+            new_ref, mode, IP, netmask, gateway, DNS)
         if pifs[ref]['management']:
             print "Re-enabling management NIC (%s)" % mac
             session.xenapi.host.management_reconfigure(new_ref)
@@ -109,8 +117,9 @@ def save(session, host, pifs):
         print "Hot-plugging interface %s on VM %s" % (dev, uuid)
         session.xenapi.VIF.plug(vif)
 
+
 def renameif(session):
-    uuid = inventory.get_localhost_uuid ()
+    uuid = inventory.get_localhost_uuid()
     host = session.xenapi.host.get_by_uuid(uuid)
     pool = session.xenapi.pool.get_all()[0]
     master = session.xenapi.pool.get_master(pool)
@@ -121,7 +130,7 @@ def renameif(session):
     for ref in pifs.keys():
         if pifs[ref]['host'] <> host or pifs[ref]['physical'] <> True:
             del pifs[ref]
-            
+
     while True:
         print "Current mappings:"
         show_pifs(pifs)
@@ -155,7 +164,7 @@ def renameif(session):
         else:
             print "NIC '%s' not found" % (x)
         print
-        
+
 
 if __name__ == "__main__":
     session = XenAPI.xapi_local()
@@ -164,5 +173,3 @@ if __name__ == "__main__":
         renameif(session)
     finally:
         session.logout()
-        
-

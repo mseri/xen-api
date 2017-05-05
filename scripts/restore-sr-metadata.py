@@ -4,13 +4,16 @@
 
 import atexit
 import XenAPI
-import os, sys, time
+import os
+import sys
+import time
 import getopt
 from xml.dom.minidom import parse
 import codecs
 
 sys.stdout = codecs.getwriter("utf-8")(sys.stdout)
 sys.stderr = codecs.getwriter("utf-8")(sys.stderr)
+
 
 def logout():
     try:
@@ -19,13 +22,16 @@ def logout():
         pass
 atexit.register(logout)
 
+
 def usage():
     print >> sys.stderr, "%s -f <input file> -u <sr uuid>" % sys.argv[0]
     sys.exit(1)
 
+
 def main(argv):
     session = XenAPI.xapi_local()
-    session.xenapi.login_with_password("", "", "1.0", "xen-api-scripts-restore-sr-metadata")
+    session.xenapi.login_with_password(
+        "", "", "1.0", "xen-api-scripts-restore-sr-metadata")
 
     try:
         opts, args = getopt.getopt(argv, "hf:u:", [])
@@ -35,7 +41,7 @@ def main(argv):
 
     infile = None
     sruuid = None
-    for o,a in opts:
+    for o, a in opts:
         if o == "-f":
             infile = a
         if o == "-u":
@@ -53,7 +59,7 @@ def main(argv):
     if doc.documentElement.tagName != "meta":
         print >> sys.stderr, "Unexpected root element while parsing %s" % infile
         sys.exit(1)
-    
+
     for srxml in doc.documentElement.childNodes:
         try:
             uuid = srxml.getAttribute("uuid")
@@ -72,7 +78,8 @@ def main(argv):
                 session.xenapi.SR.set_name_description(srref, name_descr)
                 print "  Description: %s" % name_descr
             except:
-                print >> sys.stderr, "Error setting SR data for: %s (%s)" % (uuid, name_label)
+                print >> sys.stderr, "Error setting SR data for: %s (%s)" % (
+                    uuid, name_label)
                 sys.exit(1)
             # go through all the SR VDIs and set the name_label and description
             for vdixml in srxml.childNodes:
@@ -80,7 +87,7 @@ def main(argv):
                     vdi_uuid = vdixml.getAttribute("uuid")
                     vdi_label = vdixml.getAttribute("name_label")
                     vdi_descr = vdixml.getAttribute("name_description")
-                except: 
+                except:
                     print >> sys.stderr, "Error parsing VDI tag"
                     continue
                 try:
@@ -91,10 +98,9 @@ def main(argv):
                     session.xenapi.VDI.set_name_description(vdiref, vdi_descr)
                     print "  Description: %s" % vdi_descr
                 except:
-                    print >> sys.stderr, "Error setting VDI data for: %s (%s)" % (vdi_uuid, name_label)
+                    print >> sys.stderr, "Error setting VDI data for: %s (%s)" % (
+                        vdi_uuid, name_label)
                     continue
 
 if __name__ == "__main__":
     main(sys.argv[1:])
-
-

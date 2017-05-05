@@ -2,7 +2,9 @@
 
 # Count the number of events received from the master
 
-import XenAPI, sys, time
+import XenAPI
+import sys
+import time
 
 iso8601 = "%Y-%m-%dT%H:%M:%SZ"
 
@@ -43,13 +45,14 @@ if __name__ == "__main__":
     url = sys.argv[1]
     if url[:5] != "https":
         raise Exception("Must use SSL for a realistic test")
-    
+
     username = sys.argv[2]
     password = sys.argv[3]
-    
+
     new_session = XenAPI.Session(url)
     try:
-        new_session.xenapi.login_with_password(username, password, "1.0", "xen-api-scripts-eventcount.py")
+        new_session.xenapi.login_with_password(
+            username, password, "1.0", "xen-api-scripts-eventcount.py")
     except XenAPI.Failure as f:
         print "Failed to acquire a session: %s" % f.details
         sys.exit(1)

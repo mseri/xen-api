@@ -41,29 +41,38 @@ ERROR_MESSAGE_VERSION_INSTALLED = 'Installed: '
 ERROR_MESSAGE_DOWNLOAD_PACKAGE = 'Error downloading packages:\n'
 ERROR_MESSAGE_GPGKEY_NOT_IMPORTED = 'Gpg Keys not imported'
 
+
 class PrecheckFailure(Exception):
     pass
+
 
 class PrerequisiteMissing(Exception):
     pass
 
+
 class ConflictPresent(Exception):
     pass
+
 
 class WrongServerVersion(Exception):
     pass
 
+
 class InvalidUpdate(Exception):
     pass
+
 
 class GpgkeyNotImported(Exception):
     pass
 
+
 class IsoMounted(Exception):
     pass
 
+
 class VmRunning(Exception):
     pass
+
 
 def success_message(result):
     rpcparams = {'Status': 'Success', 'Value': result}
@@ -92,14 +101,17 @@ def execute_precheck(session, control_package, yum_conf_file, update_precheck_fi
     if not control_package:
         return 'ok'
     livepatch_messages = {'PATCH_PRECHECK_LIVEPATCH_COMPLETE': 'ok_livepatch_complete',
-                     'PATCH_PRECHECK_LIVEPATCH_INCOMPLETE': 'ok_livepatch_incomplete',
-                     'PATCH_PRECHECK_LIVEPATCH_NOT_APPLICABLE': 'ok'}
-    cmd = ['yum', 'install', '-y', '--noplugins', '-c', yum_conf_file, control_package]
+                          'PATCH_PRECHECK_LIVEPATCH_INCOMPLETE': 'ok_livepatch_incomplete',
+                          'PATCH_PRECHECK_LIVEPATCH_NOT_APPLICABLE': 'ok'}
+    cmd = ['yum', 'install', '-y', '--noplugins',
+           '-c', yum_conf_file, control_package]
     yum_env = os.environ.copy()
     yum_env['LANG'] = 'C'
-    p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True, env=yum_env)
+    p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT, close_fds=True, env=yum_env)
     output, _ = p.communicate()
-    xcp.logger.info('pool_update.precheck %r returncode=%r output=%r', cmd, p.returncode, output)
+    xcp.logger.info(
+        'pool_update.precheck %r returncode=%r output=%r', cmd, p.returncode, output)
     if p.returncode != 0:
         if ERROR_MESSAGE_DOWNLOAD_PACKAGE in output:
             raise InvalidUpdate('Missing package(s) in the update')
@@ -113,12 +125,15 @@ def execute_precheck(session, control_package, yum_conf_file, update_precheck_fi
         if PATCH_PRECHECK_FAILED_VM_RUNNING in output:
             raise VmRunning
 
-        m = re.search('(?<=' + ERROR_MESSAGE_START + ').+$', output, flags=re.DOTALL)
+        m = re.search('(?<=' + ERROR_MESSAGE_START + ').+$',
+                      output, flags=re.DOTALL)
         if m:
             errmsg = m.group()
-            errmsg = re.sub(ERROR_MESSAGE_END + '.+', '', errmsg, flags=re.DOTALL)
+            errmsg = re.sub(ERROR_MESSAGE_END + '.+',
+                            '', errmsg, flags=re.DOTALL)
             if ERROR_MESSAGE_CONFLICTS_WITH in errmsg and ERROR_MESSAGE_PROCESSING_CONFLICT in output:
-                regex = ERROR_MESSAGE_PROCESSING_CONFLICT + '(.*)' + ERROR_MESSAGE_CONFLICTS + '(.+?)\n'
+                regex = ERROR_MESSAGE_PROCESSING_CONFLICT + \
+                    '(.*)' + ERROR_MESSAGE_CONFLICTS + '(.+?)\n'
                 conflict_tuples = re.findall(regex, output)
                 if len(conflict_tuples) > 0:
                     conflict_updates = ''
@@ -133,7 +148,8 @@ def execute_precheck(session, control_package, yum_conf_file, update_precheck_fi
                 if match:
                     required_version = match.group(1).rstrip()
                     installed_version = match.group(2).rstrip()
-                    raise WrongServerVersion(required_version, installed_version)
+                    raise WrongServerVersion(
+                        required_version, installed_version)
                 else:
                     raise PrecheckFailure(errmsg)
             elif ERROR_MESSAGE_PREREQUISITE in errmsg:
@@ -152,9 +168,11 @@ def execute_precheck(session, control_package, yum_conf_file, update_precheck_fi
             raise PrecheckFailure(output)
 
     if os.path.isfile(update_precheck_file):
-        pp = subprocess.Popen(update_precheck_file, shell=False, stdout=subprocess.PIPE, close_fds=True)
+        pp = subprocess.Popen(update_precheck_file, shell=False,
+                              stdout=subprocess.PIPE, close_fds=True)
         precheck_output, _ = pp.communicate()
-        xcp.logger.info('pool_update.precheck %r precheck_output=%r', update_precheck_file, precheck_output)
+        xcp.logger.info('pool_update.precheck %r precheck_output=%r',
+                        update_precheck_file, precheck_output)
         if pp.returncode != 0:
             raise PrecheckFailure(precheck_output)
         else:
@@ -195,13 +213,15 @@ if __name__ == '__main__':
         statvfs = os.statvfs('/')
         available_dom0_disk_size = statvfs.f_frsize * statvfs.f_bavail
         try:
-            required_size = int(session.xenapi.pool_update.get_installation_size(update))
+            required_size = int(
+                session.xenapi.pool_update.get_installation_size(update))
             if required_size > available_dom0_disk_size:
                 print(failure_message(UPDATE_PRECHECK_FAILED_OUT_OF_SPACE,
-                    [update_package, str(available_dom0_disk_size), str(required_size)]))
+                                      [update_package, str(available_dom0_disk_size), str(required_size)]))
                 sys.exit(0)
         except:
-            print(failure_message(INVALID_UPDATE, ["Issue with <installation-size> in update.xml"]))
+            print(failure_message(INVALID_UPDATE, [
+                  "Issue with <installation-size> in update.xml"]))
             sys.exit(0)
 
         # attach and get the yum configuration
@@ -223,25 +243,32 @@ if __name__ == '__main__':
         yum_url = config.get(update_package, 'baseurl')
 
         control_package = parse_control_package(session, yum_url)
-        update_precheck_file = os.path.join(UPDATE_DIR, update_uuid, 'precheck')
-        print(success_message(execute_precheck(session, control_package, yum_conf_file, update_precheck_file)))
+        update_precheck_file = os.path.join(
+            UPDATE_DIR, update_uuid, 'precheck')
+        print(success_message(execute_precheck(
+            session, control_package, yum_conf_file, update_precheck_file)))
     except PrerequisiteMissing as e:
-        print(failure_message(UPDATE_PRECHECK_FAILED_PREREQUISITE_MISSING, [update_package, str(e)]))
+        print(failure_message(
+            UPDATE_PRECHECK_FAILED_PREREQUISITE_MISSING, [update_package, str(e)]))
     except ConflictPresent as e:
-        print(failure_message(UPDATE_PRECHECK_FAILED_CONFLICT_PRESENT, [update_package, str(e)]))
+        print(failure_message(
+            UPDATE_PRECHECK_FAILED_CONFLICT_PRESENT, [update_package, str(e)]))
     except WrongServerVersion as e:
         required_version, installed_version = e.args
-        print(failure_message(UPDATE_PRECHECK_FAILED_WRONG_SERVER_VERSION, [update_package, installed_version, required_version]))
+        print(failure_message(UPDATE_PRECHECK_FAILED_WRONG_SERVER_VERSION, [
+              update_package, installed_version, required_version]))
     except InvalidUpdate as e:
         print(failure_message(INVALID_UPDATE, [update_package, str(e)]))
     except GpgkeyNotImported as e:
-        print(failure_message(UPDATE_PRECHECK_FAILED_GPGKEY_NOT_IMPORTED, [update_package]))
+        print(failure_message(
+            UPDATE_PRECHECK_FAILED_GPGKEY_NOT_IMPORTED, [update_package]))
     except IsoMounted as e:
         print(failure_message(PATCH_PRECHECK_FAILED_ISO_MOUNTED, [update]))
     except VmRunning as e:
         print(failure_message(PATCH_PRECHECK_FAILED_VM_RUNNING, [update]))
     except Exception as e:
-        print(failure_message(UPDATE_PRECHECK_FAILED_UNKNOWN_ERROR, [update_package, str(e)]))
+        print(failure_message(
+            UPDATE_PRECHECK_FAILED_UNKNOWN_ERROR, [update_package, str(e)]))
     finally:
         if session is not None and update_vdi_valid is True:
             session.xenapi.pool_update.detach(update)

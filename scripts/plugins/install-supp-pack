@@ -7,25 +7,32 @@ import json
 import XenAPIPlugin
 import xcp.environ
 
+
 class PluginError(Exception):
     """Base Exception class for all plugin errors."""
+
     def __init__(self, *args):
         Exception.__init__(self, *args)
 
+
 class ArgumentError(PluginError):
     """Raised when the arguments to the plugin are invalid"""
+
     def __init__(self, *args):
         PluginError.__init__(self, *args)
 
+
 class InstallFailure(PluginError):
     """Raised when there was a failure during install"""
+
     def __init__(self, *args):
         PluginError.__init__(self, *args)
+
 
 def install(session, args):
     if not args.has_key("vdi"):
         raise ArgumentError("Key 'vdi' missing from arguments")
-    vdi=args['vdi']
+    vdi = args['vdi']
     vdi_ref = None
     try:
         vdi_ref = session.xenapi.VDI.get_by_uuid(vdi)

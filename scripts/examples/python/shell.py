@@ -23,6 +23,7 @@ import sys
 
 import XenAPI
 
+
 def logout():
     try:
         session.xenapi.session.logout()
@@ -30,7 +31,9 @@ def logout():
         pass
 atexit.register(logout)
 
+
 class Shell(cmd.Cmd):
+
     def __init__(self):
         cmd.Cmd.__init__(self)
         self.identchars = string.ascii_letters + string.digits + '_.'
@@ -65,12 +68,13 @@ class Shell(cmd.Cmd):
         print
         sys.exit(0)
 
-def munge_types (str):
+
+def munge_types(str):
     if str == "True":
         return True
     elif str == "False":
         return False
-    
+
     try:
         return int(str)
     except:
@@ -80,23 +84,25 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print "Usage:"
         print sys.argv[0], " <url> <username> <password>"
-        sys.exit(1) 
+        sys.exit(1)
 
     if sys.argv[1] <> "-" and len(sys.argv) < 4:
         print "Usage:"
         print sys.argv[0], " <url> <username> <password>"
-        sys.exit(1) 
+        sys.exit(1)
 
     if sys.argv[1] <> "-":
         url = sys.argv[1]
         username = sys.argv[2]
         password = sys.argv[3]
         session = XenAPI.Session(url)
-        session.xenapi.login_with_password(username, password, "1.0", "xen-api-scripts-shell.py")
+        session.xenapi.login_with_password(
+            username, password, "1.0", "xen-api-scripts-shell.py")
         cmdAt = 4
     else:
         session = XenAPI.xapi_local()
-        session.xenapi.login_with_password("", "", "1.0", "xen-api-scripts-shell.py")
+        session.xenapi.login_with_password(
+            "", "", "1.0", "xen-api-scripts-shell.py")
         cmdAt = 2
 
     # We want to support directly executing the cmd line,

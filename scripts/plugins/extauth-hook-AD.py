@@ -52,15 +52,19 @@ session    include      system-auth
 session    required     pam_loginuid.so
 """
 
+
 def log_err(err):
     print >>sys.stderr, err
-    syslog.syslog(syslog.LOG_USER | syslog.LOG_ERR, "%s: %s" % (sys.argv[0], err))
+    syslog.syslog(syslog.LOG_USER | syslog.LOG_ERR,
+                  "%s: %s" % (sys.argv[0], err))
 
 
 class PamSshConfig:
+
     def __init__(self):
         # Create a temporary file for staging, and start it off
-        self.temp_fd, self.temp_fname = tempfile.mkstemp(prefix="sshd-", dir="/etc/pam.d")
+        self.temp_fd, self.temp_fname = tempfile.mkstemp(
+            prefix="sshd-", dir="/etc/pam.d")
         os.write(self.temp_fd, etc_pamd_sshd_start_boilerplate)
         self.installed = False
 
@@ -74,11 +78,13 @@ class PamSshConfig:
         # Add a subject to the temporary file
         if self.installed:
             raise Exception, "Cannot add subject once installed "
-        lines = commands.getoutput("/opt/pbis/bin/find-by-sid %s" % sid).split("\n")
+        lines = commands.getoutput(
+            "/opt/pbis/bin/find-by-sid %s" % sid).split("\n")
         name_lines = filter(lambda x: x.startswith("Name:"), lines)
         if len(name_lines) != 1:
             # Just warn, don't raise exception - there may be others that work
-            log_err("Could not find user/group corresponding to SID %s (%s)" % (sid,str(lines)))
+            log_err("Could not find user/group corresponding to SID %s (%s)" %
+                    (sid, str(lines)))
             return
         name = name_lines[0].split(":")[1].strip()
         uid_lines = filter(lambda x: x.startswith("Uid:"), lines)
@@ -88,9 +94,11 @@ class PamSshConfig:
             is_group = False
 
         if is_group:
-            os.write(self.temp_fd, "account sufficient pam_succeed_if.so user ingroup %s\n" % name)
+            os.write(
+                self.temp_fd, "account sufficient pam_succeed_if.so user ingroup %s\n" % name)
         else:
-            os.write(self.temp_fd, "account sufficient pam_succeed_if.so user = %s\n" % name)
+            os.write(self.temp_fd,
+                     "account sufficient pam_succeed_if.so user = %s\n" % name)
 
 
 def rewrite_etc_pamd_ssh(session, args):
@@ -111,6 +119,7 @@ def rewrite_etc_pamd_ssh(session, args):
     except:
         return "ERROR_0: rewrite_etc_pamd_ssh failed"
 
+
 def revert_etc_pamd_ssh(session, args):
     # Revert the PAM SSH config to the default version that doesn't support
     # Active Directory
@@ -126,17 +135,22 @@ def revert_etc_pamd_ssh(session, args):
 def after_extauth_enable(session, args):
     return rewrite_etc_pamd_ssh(session, args)
 
+
 def after_xapi_initialize(session, args):
     return rewrite_etc_pamd_ssh(session, args)
+
 
 def after_subject_add(session, args):
     return rewrite_etc_pamd_ssh(session, args)
 
+
 def after_subject_remove(session, args):
     return rewrite_etc_pamd_ssh(session, args)
 
+
 def after_roles_update(session, args):
     return rewrite_etc_pamd_ssh(session, args)
+
 
 def before_extauth_disable(session, args):
     return revert_etc_pamd_ssh(session, args)
@@ -149,7 +163,6 @@ if __name__ == "__main__":
         "after-subject-add":     after_subject_add,
         "after-subject-remove":  after_subject_remove,
         "after-roles-update":    after_roles_update,
-        "before-extauth-disable":before_extauth_disable,
+        "before-extauth-disable": before_extauth_disable,
     }
     XenAPIPlugin.dispatch(dispatch_tbl)
-

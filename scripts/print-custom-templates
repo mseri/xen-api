@@ -4,7 +4,10 @@
 
 import atexit
 import XenAPI
-import os, sys, time
+import os
+import sys
+import time
+
 
 def logout():
     try:
@@ -13,17 +16,20 @@ def logout():
         pass
 atexit.register(logout)
 
+
 def main(argv):
     try:
         session = XenAPI.xapi_local()
-        session.xenapi.login_with_password("", "", "1.0", "xen-api-scripts-custom-template")
+        session.xenapi.login_with_password(
+            "", "", "1.0", "xen-api-scripts-custom-template")
 
-        templates = session.xenapi.VM.get_all_records_where('field "is_a_template" = "true" and field "is_a_snapshot" = "false"' )
+        templates = session.xenapi.VM.get_all_records_where(
+            'field "is_a_template" = "true" and field "is_a_snapshot" = "false"')
     except:
         print >> sys.stderr, "Error retrieving template list"
         sys.exit(1)
 
-    output=[]
+    output = []
     for tmplref in templates.keys():
         tmplrec = templates[tmplref]
         try:
@@ -38,5 +44,3 @@ def main(argv):
 
 if __name__ == "__main__":
     main(sys.argv[1:])
-
-

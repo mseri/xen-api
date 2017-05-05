@@ -22,13 +22,14 @@
 # Clean shutdown attempts are run in parallel and are cancelled on
 # timeout.
 
-import sys, time
+import sys
+import time
 import signal
 import syslog
 
 import XenAPI
 
-TIMEOUT_SECS=30
+TIMEOUT_SECS = 30
 
 
 # class for determining whether xe is responsive
@@ -68,13 +69,13 @@ def wait_for_tasks(session, tasks, timeout):
     """returns true if all tasks are nolonger pending (ie success/failure/cancelled)
     and false if a timeout occurs"""
     finished = False
-    start = time.time ()
-    while not(finished) and ((time.time () - start) < timeout):
+    start = time.time()
+    while not(finished) and ((time.time() - start) < timeout):
         finished = True
         for task in tasks:
             if task_is_pending(session, task):
                 finished = False
-        time.sleep(1)        
+        time.sleep(1)
     return finished
 
 
@@ -88,8 +89,9 @@ def get_running_domains(session, host):
                 print "\n  Skip running VM %s has self-managed power-off" % record["name_label"],
                 sys.stdout.flush()
                 continue
-            vms.append((vm,record))
+            vms.append((vm, record))
     return vms
+
 
 def estimate_evacuate_timeout(session, host):
     """ Rough estimation of the evacuate uplimit based on live VMs memory """
@@ -99,6 +101,7 @@ def estimate_evacuate_timeout(session, host):
     # Conservative estimation based on 1000Mbps link, and the memory usage of
     # Dom0 (which is not going to be transferred) is an intentional surplus
     return (memory_used * 8. / (1000. * 1024 * 1024))
+
 
 def host_evacuate(session, host):
     """Attempts a host evacuate. If the timeout expires then it attempts to cancel
@@ -111,9 +114,10 @@ def host_evacuate(session, host):
     try:
         timeout = max(estimate_evacuate_timeout(session, host), timeout)
     except Exception, e:
-        syslog.syslog(syslog.LOG_WARNING, "Evacuate timeout estimation error: %s, use default." % e)
+        syslog.syslog(syslog.LOG_WARNING,
+                      "Evacuate timeout estimation error: %s, use default." % e)
     try:
-        if not(wait_for_tasks(session, [ task ], timeout)):
+        if not(wait_for_tasks(session, [task], timeout)):
             print "\n  Cancelling evacuation of host",
             sys.stdout.flush()
             session.xenapi.task.cancel(task)
@@ -144,21 +148,21 @@ def parallel_clean_shutdown(session, vms):
     rc = 0
 
     try:
-        for vm,record in vms:
+        for vm, record in vms:
             if not "clean_shutdown" in record["allowed_operations"]:
                 continue
 
             print "\n  Requesting clean shutdown of VM: %s" % (record["name_label"]),
             sys.stdout.flush()
             task = session.xenapi.Async.VM.clean_shutdown(vm)
-            tasks.append((task,vm,record))
+            tasks.append((task, vm, record))
 
         if not tasks:
             return 0
 
-        if not(wait_for_tasks(session, map(lambda x:x[0], tasks), 60)):
+        if not(wait_for_tasks(session, map(lambda x: x[0], tasks), 60)):
             # Cancel any remaining tasks.
-            for (task,_,record) in tasks:
+            for (task, _, record) in tasks:
                 try:
                     if task_is_pending(session, task):
                         print "\n  Cancelling clean shutdown of VM: %s" % (record["name_label"]),
@@ -167,13 +171,13 @@ def parallel_clean_shutdown(session, vms):
                 except:
                     pass
 
-        if not(wait_for_tasks(session, map(lambda x:x[0], tasks), 60)):
-            for (_,vm,_) in tasks:
+        if not(wait_for_tasks(session, map(lambda x: x[0], tasks), 60)):
+            for (_, vm, _) in tasks:
                 if session.xenapi.VM.get_power_state(vm) == "Running":
                     rc += 1
 
     finally:
-        for (task,_,_) in tasks:
+        for (task, _, _) in tasks:
             try:
                 session.xenapi.task.destroy(task)
             except Exception:
@@ -187,7 +191,7 @@ def serial_hard_shutdown(session, vms):
     """Performs a serial VM.hard_shutdown of all running VMs on a given host."""
     rc = 0
     try:
-        for (vm,record) in vms:
+        for (vm, record) in vms:
             print "\n  Requesting hard shutdown of VM: %s" % (record["name_label"]),
             sys.stdout.flush()
 
@@ -224,7 +228,7 @@ def main(session, host_uuid, force):
 
         # check for self-managed power off
         vms = []
-        for (vm,record) in vms_f:
+        for (vm, record) in vms_f:
             if 'auto_poweroff' in record['other_config'] and record['other_config'].get('auto_poweroff') == "false":
                 print "\n  VM %s has self-managed power-off" % record["name_label"],
                 sys.stdout.flush()
@@ -237,7 +241,8 @@ def main(session, host_uuid, force):
         rc += host_evacuate(session, host)
 
         # Any remaining VMs should be shutdown
-        rc += parallel_clean_shutdown(session, get_running_domains(session, host))
+        rc += parallel_clean_shutdown(session,
+                                      get_running_domains(session, host))
     else:
         rc += serial_hard_shutdown(session, get_running_domains(session, host))
 
@@ -257,7 +262,8 @@ if __name__ == "__main__":
 
     new_session = XenAPI.xapi_local()
 
-    connect_to_master_with_timeout = TimeoutFunction(new_session.xenapi.login_with_password, TIMEOUT_SECS)
+    connect_to_master_with_timeout = TimeoutFunction(
+        new_session.xenapi.login_with_password, TIMEOUT_SECS)
 
     try:
         connect_to_master_with_timeout("root", "")
@@ -267,7 +273,7 @@ if __name__ == "__main__":
     except Exception:
         print 'Failed to connect to master.'
         sys.exit(2)
-        
+
     try:
         rc = main(new_session, uuid, force)
         sys.exit(rc)

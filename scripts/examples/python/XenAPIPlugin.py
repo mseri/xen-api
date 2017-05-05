@@ -2,24 +2,31 @@
 
 # XenAPI python plugin boilerplate code
 
-import sys, xmlrpclib, XenAPI
+import sys
+import xmlrpclib
+import XenAPI
+
 
 class Failure(Exception):
     """Provide compatibilty with plugins written against XenServer 5.5 API"""
 
     def __init__(self, code, params):
         Exception.__init__(self)
-        self.params = [ code ] + params
+        self.params = [code] + params
+
     def __str__(self):
         return str(self.params)
 
+
 def success_message(result):
-    rpcparams = { 'Status': 'Success', 'Value': result }
+    rpcparams = {'Status': 'Success', 'Value': result}
     return xmlrpclib.dumps((rpcparams, ), '', True)
 
+
 def failure_message(description):
-    rpcparams = { 'Status': 'Failure', 'ErrorDescription': description }
+    rpcparams = {'Status': 'Failure', 'ErrorDescription': description}
     return xmlrpclib.dumps((rpcparams, ), '', True)
+
 
 def dispatch(fn_table):
     if len(sys.argv) <> 2:
@@ -34,7 +41,8 @@ def dispatch(fn_table):
             result = fn_table[methodname](x, args)
             print success_message(result)
         except SystemExit:
-            # SystemExit should not be caught, as it is handled elsewhere in the plugin system.
+            # SystemExit should not be caught, as it is handled elsewhere in
+            # the plugin system.
             raise
         except Failure, e:
             print failure_message(e.params)

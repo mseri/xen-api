@@ -41,7 +41,7 @@ def vm_of_metrics(ref):
     global vgm_to_vm
     if not(ref in vgm_to_vm.keys()):
         return None
-    return vgm_to_vm[ref]    
+    return vgm_to_vm[ref]
 
 interesting_vms = []
 vm_boot_times = {}
@@ -60,11 +60,11 @@ def seen_possible_boot(session, vm_ref):
     global interesting_vms
     global boots_seen
     if not(vm_ref in vm_boot_times.keys()) and vm_ref in interesting_vms:
-        t = time.strftime( "%Y%m%dT%H:%M:%SZ", time.gmtime())
+        t = time.strftime("%Y%m%dT%H:%M:%SZ", time.gmtime())
         vm_boot_times[vm_ref] = t
         boots_seen += 1
-        
-        name = session.xenapi.VM.get_name_label(vm)        
+
+        name = session.xenapi.VM.get_name_label(vm)
         print >>sys.stdout, "%d %s %s" % (boots_seen, name, t)
         print >>sys.stderr, "%d %s %s" % (boots_seen, name, t)
         sys.stderr.flush()
@@ -95,20 +95,21 @@ def process_metrics_event(session, ref):
         return
     other = {}
     try:
-        other=session.xenapi.VM_guest_metrics.get_other(ref)
+        other = session.xenapi.VM_guest_metrics.get_other(ref)
     except Exception, e:
         print repr(e)
-        
+
     if "feature-shutdown" in other.keys():
         seen_possible_boot(session, vm_ref)
-        
+
 
 def watch_events_on_vm(session):
     try:
         token = ''
         call_timeout = 30.0
         while True:
-            output = session.xenapi.event_from(["VM", "VM_guest_metrics"], token, call_timeout)
+            output = session.xenapi.event_from(
+                ["VM", "VM_guest_metrics"], token, call_timeout)
             events = output['events']
             token = output['token']
 
@@ -116,7 +117,8 @@ def watch_events_on_vm(session):
                 if event['operation'] == 'del':
                     continue
                 if event['class'] == 'vm' and event['operation'] == 'mod':
-                    register_vm_metrics(session, event['ref'], event['snapshot']['guest_metrics'])
+                    register_vm_metrics(session, event['ref'], event[
+                                        'snapshot']['guest_metrics'])
                     continue
                 if event['class'] == 'vm_guest_metrics':
                     process_metrics_event(session, event['ref'])
@@ -151,7 +153,8 @@ or
 
     # First acquire a valid session by logging in
     try:
-        new_session.xenapi.login_with_password(username, password, "1.0", "xen-api-scripts-timevmboots.py")
+        new_session.xenapi.login_with_password(
+            username, password, "1.0", "xen-api-scripts-timevmboots.py")
     except XenAPI.Failure as f:
         print "Failed to acquire a session: %s" % f.details
         sys.exit(1)

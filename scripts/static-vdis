@@ -1,13 +1,21 @@
 #!/usr/bin/env python
 
-# Common functions for managing statically-attached (ie onboot, without xapi) VDIs
+# Common functions for managing statically-attached (ie onboot, without
+# xapi) VDIs
 
-import sys, os, subprocess, json, urlparse
-import XenAPI, inventory, xmlrpclib
+import sys
+import os
+import subprocess
+import json
+import urlparse
+import XenAPI
+import inventory
+import xmlrpclib
 
 main_dir = "/etc/xensource/static-vdis"
 
 xapi_storage_script = "/usr/libexec/xapi-storage-script"
+
 
 def call_volume_plugin(name, command, args):
     args = [(xapi_storage_script + "/volume/org.xen.xapi.storage." + name + "/"
@@ -15,10 +23,13 @@ def call_volume_plugin(name, command, args):
     output = subprocess.check_output(args)
     return json.loads(output)
 
+
 def call_datapath_plugin(name, command, args):
-    args = [ xapi_storage_script + "/datapath/" + name + "/" + command, "static-vdis" ] + args
+    args = [xapi_storage_script + "/datapath/" +
+            name + "/" + command, "static-vdis"] + args
     output = subprocess.check_output(args)
     return json.loads(output)
+
 
 def read_whole_file(filename):
     f = open(filename)
@@ -27,6 +38,7 @@ def read_whole_file(filename):
     finally:
         f.close()
 
+
 def write_whole_file(filename, contents):
     f = open(filename, "w")
     try:
@@ -34,16 +46,17 @@ def write_whole_file(filename, contents):
     finally:
         f.close()
 
+
 def load(name):
     """Return a dictionary describing a single static VDI"""
-    d = { "id": name }
-    for key in [ "vdi-uuid", "config", "sr-uri", "volume-plugin", "volume-uri", "volume-key", "reason" ]:
+    d = {"id": name}
+    for key in ["vdi-uuid", "config", "sr-uri", "volume-plugin", "volume-uri", "volume-key", "reason"]:
         path = "%s/%s/%s" % (main_dir, name, key)
         if os.path.exists(path):
-             d[key] = read_whole_file(path)
+            d[key] = read_whole_file(path)
     try:
         disk = "%s/%s/disk" % (main_dir, name)
-        os.stat(disk) # throws an error if missing
+        os.stat(disk)  # throws an error if missing
         d["disk"] = os.readlink(disk)
     except:
         pass
@@ -56,6 +69,7 @@ def load(name):
     d["delete-next-boot"] = dnb
     return d
 
+
 def list():
     all = []
     try:
@@ -64,11 +78,12 @@ def list():
         pass
     return map(load, all)
 
+
 def fresh_name():
     all = []
     try:
         all = os.listdir(main_dir)
-        for i in range(0, len(all) + 1): # guarantees to find a unique number
+        for i in range(0, len(all) + 1):  # guarantees to find a unique number
             i = str(i)
             if not(i in all):
                 return i
@@ -76,19 +91,22 @@ def fresh_name():
         # Directory doesn't exist
         os.mkdir(main_dir)
         return "0"
-        
+
 
 def to_string_list(d):
-    keys = [ "vdi-uuid", "reason", "currently-attached", "delete-next-boot" "path" ]
+    keys = ["vdi-uuid", "reason", "currently-attached",
+            "delete-next-boot" "path"]
     m = 0
     for key in keys:
         if len(key) > m:
             m = m + len(key)
+
     def left(key, value):
         return key + (" " * (m - len(key))) + ": " + value
+
     def right(key, value):
         return (" " * (m - len(key))) + key + ": " + value
-    l = [ left("vdi-uuid", d["vdi-uuid"]), right("reason", d["reason"]) ]
+    l = [left("vdi-uuid", d["vdi-uuid"]), right("reason", d["reason"])]
     l.append(right("delete-next-boot", d["delete-next-boot"]))
     if d.has_key("disk"):
         l.append(right("currently-attached", "True"))
@@ -96,6 +114,7 @@ def to_string_list(d):
     else:
         l.append(right("currently-attached", "False"))
     return l
+
 
 def add(session, vdi_uuid, reason):
     for existing in list():
@@ -109,9 +128,9 @@ def add(session, vdi_uuid, reason):
                 # Assume config is still valid
                 return
             raise Exception("Static configuration for VDI already exists")
-    
+
     vdi = session.xenapi.VDI.get_by_uuid(vdi_uuid)
-    host = session.xenapi.host.get_by_uuid(inventory.get_localhost_uuid ())
+    host = session.xenapi.host.get_by_uuid(inventory.get_localhost_uuid())
     sr = session.xenapi.VDI.get_SR(vdi)
     ty = session.xenapi.SR.get_type(sr)
 
@@ -119,9 +138,9 @@ def add(session, vdi_uuid, reason):
     # SRs.
     device_config = None
     for p in session.xenapi.host.get_PBDs(host):
-       p_rec = session.xenapi.PBD.get_record(p)
-       if p_rec['SR'] == sr:
-         device_config = p_rec['device_config']
+        p_rec = session.xenapi.PBD.get_record(p)
+        if p_rec['SR'] == sr:
+            device_config = p_rec['device_config']
 
     sm = None
     all_sm = session.xenapi.SM.get_all_records()
@@ -142,9 +161,9 @@ def add(session, vdi_uuid, reason):
     if sm["features"].has_key("VDI_ATTACH_OFFLINE"):
         data["volume-plugin"] = ty
         data["sr-uri"] = device_config['uri']
-        sr = call_volume_plugin(ty, "SR.attach", [ data["sr-uri"] ])
+        sr = call_volume_plugin(ty, "SR.attach", [data["sr-uri"]])
         location = session.xenapi.VDI.get_location(vdi)
-        stat = call_volume_plugin(ty, "Volume.stat", [ sr, location ])
+        stat = call_volume_plugin(ty, "Volume.stat", [sr, location])
         data["volume-uri"] = stat["uri"][0]
         data["volume-key"] = stat["key"]
     else:
@@ -153,7 +172,8 @@ def add(session, vdi_uuid, reason):
             data["driver"] = session.xenapi.SM.get_driver_filename(sm_ref)
             data["config"] = session.xenapi.VDI.generate_config(host, vdi)
         except XenAPI.Failure, e:
-            raise Exception("Failed generating static config file: %s" % (str(e)))
+            raise Exception(
+                "Failed generating static config file: %s" % (str(e)))
 
     # Make a fresh directory in main_dir to store the configuration. Note
     # there is no locking so please run this script serially.
@@ -162,6 +182,7 @@ def add(session, vdi_uuid, reason):
     os.mkdir(path)
     for key in data.keys():
         write_whole_file(path + "/" + key, data[key])
+
 
 def delete(vdi_uuid):
     found = False
@@ -178,12 +199,16 @@ def delete(vdi_uuid):
         raise Exception("Disk configuration not found")
 
 # Copied by util.py
+
+
 def doexec(args, inputtext=None):
     """Execute a subprocess, then return its return code, stdout and stderr"""
-    proc = subprocess.Popen(args,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True)
-    (stdout,stderr) = proc.communicate(inputtext)
+    proc = subprocess.Popen(args, stdin=subprocess.PIPE,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+    (stdout, stderr) = proc.communicate(inputtext)
     rc = proc.returncode
-    return (rc,stdout,stderr)
+    return (rc, stdout, stderr)
+
 
 def call_backend_attach(driver, config):
     args = map(lambda arg: arg.encode('utf8'), [driver, config])
@@ -192,16 +217,17 @@ def call_backend_attach(driver, config):
         raise Exception("SM_BACKEND_FAILURE(%d, %s, %s)" % xml)
     xmlrpc = xmlrpclib.loads(xml[1])
     try:
-    	path = xmlrpc[0][0]['params']
+        path = xmlrpc[0][0]['params']
     except:
-	path = xmlrpc[0][0]
+        path = xmlrpc[0][0]
     return path
+
 
 def call_backend_detach(driver, config):
     params = xmlrpclib.loads(config)[0][0]
     params['command'] = 'vdi_detach_from_config'
     config = xmlrpclib.dumps(tuple([params]), params['command'])
-    xml = doexec([ driver, config ])
+    xml = doexec([driver, config])
     if xml[0] <> 0:
         raise Exception("SM_BACKEND_FAILURE(%d, %s, %s)" % xml)
     xmlrpc = xmlrpclib.loads(xml[1])
@@ -211,13 +237,14 @@ def call_backend_detach(driver, config):
         res = xmlrpc[0][0]
     return res
 
+
 def attach(vdi_uuid):
     found = False
     for existing in list():
         if existing['vdi-uuid'] == vdi_uuid:
             found = True
             if not(existing.has_key('path')):
-                d = main_dir + "/" + existing['id'] 
+                d = main_dir + "/" + existing['id']
                 # Delete any old symlink
                 try:
                     os.unlink(d + "/disk")
@@ -235,15 +262,19 @@ def attach(vdi_uuid):
                     vol_key = read_whole_file(d + "/volume-key")
                     vol_uri = read_whole_file(d + "/volume-uri")
                     scheme = urlparse.urlparse(vol_uri).scheme
-                    sr = call_volume_plugin(volume_plugin, "SR.attach", [ sr_uri ])
-                    attach = call_datapath_plugin(scheme, "Datapath.attach", [ vol_uri, "0" ])
+                    sr = call_volume_plugin(
+                        volume_plugin, "SR.attach", [sr_uri])
+                    attach = call_datapath_plugin(
+                        scheme, "Datapath.attach", [vol_uri, "0"])
                     path = attach['implementation'][1]
-                    call_datapath_plugin(scheme, "Datapath.activate", [ vol_uri, "0" ])
+                    call_datapath_plugin(
+                        scheme, "Datapath.activate", [vol_uri, "0"])
 
                 os.symlink(path, d + "/disk")
                 return d + "/disk"
     if not found:
         raise Exception("Disk configuration not found")
+
 
 def detach(vdi_uuid):
     found = False
@@ -263,35 +294,37 @@ def detach(vdi_uuid):
                 vol_key = read_whole_file(d + "/volume-key")
                 vol_uri = read_whole_file(d + "/volume-uri")
                 scheme = urlparse.urlparse(vol_uri).scheme
-                call_datapath_plugin(scheme, "Datapath.deactivate", [ vol_uri, "0" ])
-                call_datapath_plugin(scheme, "Datapath.detach", [ vol_uri, "0" ])
+                call_datapath_plugin(
+                    scheme, "Datapath.deactivate", [vol_uri, "0"])
+                call_datapath_plugin(scheme, "Datapath.detach", [vol_uri, "0"])
             os.unlink(d + "/disk")
             return
     if not found:
         raise Exception("Disk configuration not found")
 
-    
+
 def usage():
     print "Usage:"
     print " %s list                 -- print a list of VDIs which will be attached on host boot" % sys.argv[0]
     print " %s add <uuid> <reason>  -- make the VDI <uuid> available on host boot" % sys.argv[0]
     print " %s del <uuid>           -- cease making the VDI <uuid> available on host boot" % sys.argv[0]
-    print " %s attach <uuid>        -- attach the VDI immediately" % sys.argv[0]    
+    print " %s attach <uuid>        -- attach the VDI immediately" % sys.argv[0]
     print " %s detach <uuid>        -- detach the VDI immediately" % sys.argv[0]
     sys.exit(1)
-    
-if  __name__ == "__main__":
+
+if __name__ == "__main__":
     if len(sys.argv) < 2:
         usage()
-        
+
     if sys.argv[1] == "list" and len(sys.argv) == 2:
-        for i in list ():
+        for i in list():
             for line in to_string_list(i):
                 print line
             print
     elif sys.argv[1] == "add" and len(sys.argv) == 4:
         session = XenAPI.xapi_local()
-        session.xenapi.login_with_password("root", "", "1.0", "xen-api-scripts-static-vdis")        
+        session.xenapi.login_with_password(
+            "root", "", "1.0", "xen-api-scripts-static-vdis")
         try:
             add(session, sys.argv[2], sys.argv[3])
         finally:
@@ -305,4 +338,3 @@ if  __name__ == "__main__":
         detach(sys.argv[2])
     else:
         usage()
-    

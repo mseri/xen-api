@@ -21,22 +21,27 @@
 import XenAPI
 import xml.dom.minidom
 
+
 class Disk:
     """Represents a disk which should be created for this VM"""
+
     def __init__(self, device, size, sr, bootable):
-        self.device = device # 0, 1, 2, ...
+        self.device = device  # 0, 1, 2, ...
         self.size = size     # in bytes
         self.sr = sr         # uuid of SR
         self.bootable = bootable
+
     def toElement(self, doc):
         disk = doc.createElement("disk")
         disk.setAttribute("device", self.device)
         disk.setAttribute("size", self.size)
         disk.setAttribute("sr", self.sr)
         b = "false"
-        if self.bootable: b = "true"
+        if self.bootable:
+            b = "true"
         disk.setAttribute("bootable", b)
         return disk
+
 
 def parseDisk(element):
     device = element.getAttribute("device")
@@ -45,19 +50,24 @@ def parseDisk(element):
     b = element.getAttribute("bootable") == "true"
     return Disk(device, size, sr, b)
 
+
 class ProvisionSpec:
     """Represents a provisioning specification: currently a list of required disks"""
+
     def __init__(self):
         self.disks = []
+
     def toElement(self, doc):
         element = doc.createElement("provision")
         for disk in self.disks:
             element.appendChild(disk.toElement(doc))
         return element
+
     def setSR(self, sr):
         """Set the requested SR for each disk"""
         for disk in self.disks:
             disk.sr = sr
+
 
 def parseProvisionSpec(txt):
     """Return an instance of type ProvisionSpec given XML text"""
@@ -71,16 +81,19 @@ def parseProvisionSpec(txt):
         ps.disks.append(parseDisk(disk))
     return ps
 
+
 def printProvisionSpec(ps):
     """Return a string containing pretty-printed XML corresponding to the supplied provisioning spec"""
     doc = xml.dom.minidom.Document()
     doc.appendChild(ps.toElement(doc))
     return doc.toprettyxml()
 
+
 def getProvisionSpec(session, vm):
     """Read the provision spec of a template/VM"""
     other_config = session.xenapi.VM.get_other_config(vm)
     return parseProvisionSpec(other_config['disks'])
+
 
 def setProvisionSpec(session, vm, ps):
     """Set the provision spec of a template/VM"""

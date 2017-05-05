@@ -23,20 +23,24 @@ from socket import getfqdn
 from xcp import branding
 
 # Go read man ssmtp.conf
-default_config="""
+default_config = """
 mailhub=@MAILHUB@
 FromLineOverride=YES
 """
 
-ma_username="__dom0__mail_alarm"
+ma_username = "__dom0__mail_alarm"
+
 
 def log_err(err):
     print >>sys.stderr, err
-    syslog.syslog(syslog.LOG_USER | syslog.LOG_ERR, "%s: %s" % (sys.argv[0], err))
+    syslog.syslog(syslog.LOG_USER | syslog.LOG_ERR,
+                  "%s: %s" % (sys.argv[0], err))
+
 
 def get_pool_name():
     session = XenAPI.xapi_local()
-    session.xenapi.login_with_password(ma_username, "", "1.0", "xen-api-scripts-mail-alarm")
+    session.xenapi.login_with_password(
+        ma_username, "", "1.0", "xen-api-scripts-mail-alarm")
     try:
         opaque_ref = session.xenapi.pool.get_all()[0]
         pool_name = session.xenapi.pool.get_name_label(opaque_ref)
@@ -49,18 +53,22 @@ def get_pool_name():
     finally:
         session.xenapi.session.logout()
 
+
 def get_pool_other_config():
     session = XenAPI.xapi_local()
-    session.xenapi.login_with_password(ma_username, "", "1.0", "xen-api-scripts-mail-alarm")
+    session.xenapi.login_with_password(
+        ma_username, "", "1.0", "xen-api-scripts-mail-alarm")
     try:
         opaque_ref = session.xenapi.pool.get_all()[0]
         return session.xenapi.pool.get_other_config(opaque_ref)
     finally:
         session.xenapi.session.logout()
 
+
 def get_VM_params(uuid):
     session = XenAPI.xapi_local()
-    session.xenapi.login_with_password(ma_username, "", "1.0", "xen-api-scripts-mail-alarm")
+    session.xenapi.login_with_password(
+        ma_username, "", "1.0", "xen-api-scripts-mail-alarm")
     try:
         try:
             opaque_ref = session.xenapi.VM.get_by_uuid(uuid)
@@ -70,9 +78,11 @@ def get_VM_params(uuid):
     except:
         return {}
 
+
 def get_host_params(uuid):
     session = XenAPI.xapi_local()
-    session.xenapi.login_with_password(ma_username, "", "1.0", "xen-api-scripts-mail-alarm")
+    session.xenapi.login_with_password(
+        ma_username, "", "1.0", "xen-api-scripts-mail-alarm")
     try:
         try:
             opaque_ref = session.xenapi.host.get_by_uuid(uuid)
@@ -82,22 +92,26 @@ def get_host_params(uuid):
     except:
         return {}
 
+
 def get_search_replace(other_config):
     sr = []
-    for key in other_config: 
+    for key in other_config:
         if key.startswith('ssmtp-'):
             replacement_text = other_config[key]
             search_text = "@" + key[6:].upper() + "@"
             sr.append((search_text, replacement_text))
     return sr
 
+
 def get_destination(other_config):
     if other_config.has_key('mail-destination'):
         return other_config['mail-destination']
 
+
 def get_sender(other_config):
     if other_config.has_key('mail-sender'):
         return other_config['mail-sender']
+
 
 def get_config_file():
     try:
@@ -105,10 +119,13 @@ def get_config_file():
     except:
         return default_config
 
+
 class EmailTextGenerator:
     pass
 
+
 class CpuUsageAlarmETG(EmailTextGenerator):
+
     def __init__(self, cls, obj_uuid, value, alarm_trigger_period, alarm_trigger_level):
         if alarm_trigger_period is None:
             alarm_trigger_period = 60
@@ -126,8 +143,8 @@ class CpuUsageAlarmETG(EmailTextGenerator):
     def generate_subject(self):
         pool_name = get_pool_name()
         return '[%s] %s Alarm: CPU usage on %s "%s"' % (pool_name,
-                   branding.PRODUCT_BRAND, self.cls, self.params['name_label'])
-    
+                                                        branding.PRODUCT_BRAND, self.cls, self.params['name_label'])
+
     def generate_body(self):
         return \
             'CPU usage on %s "%s" has been on average %.1f%% for the last %d seconds.\n' \
@@ -135,15 +152,17 @@ class CpuUsageAlarmETG(EmailTextGenerator):
             '\n' \
             'For Alarm Settings, please log into your %s Console and click on "%s"->\n' \
             '"Properties"->"Alerts"\n' % \
-            (self.cls, 
+            (self.cls,
              self.params['name_label'],
              self.value * 100.0,
              self.alarm_trigger_period,
-             self.alarm_trigger_level * 100.0, 
+             self.alarm_trigger_level * 100.0,
              branding.BRAND_CONSOLE,
              (self.cls == 'Host') and 'Server' or 'VM')
 
+
 class NetworkUsageAlarmETG(EmailTextGenerator):
+
     def __init__(self, cls, obj_uuid, value, alarm_trigger_period, alarm_trigger_level):
         if alarm_trigger_period is None:
             alarm_trigger_period = 60
@@ -161,8 +180,8 @@ class NetworkUsageAlarmETG(EmailTextGenerator):
     def generate_subject(self):
         pool_name = pool_name = get_pool_name()
         return '[%s] %s Alarm: Network usage on %s "%s"' % (pool_name,
-                   branding.PRODUCT_BRAND, self.cls, self.params['name_label'])
-    
+                                                            branding.PRODUCT_BRAND, self.cls, self.params['name_label'])
+
     def generate_body(self):
         return \
             'Network usage on %s "%s" has been on average %d B/s for the last %d seconds.\n' \
@@ -170,15 +189,17 @@ class NetworkUsageAlarmETG(EmailTextGenerator):
             '\n' \
             'For Alarm Settings, please log into your %s Console and click on "%s"->\n' \
             '"Properties"->"Alerts"\n' % \
-            (self.cls, 
+            (self.cls,
              self.params['name_label'],
              self.value,
              self.alarm_trigger_period,
-             self.alarm_trigger_level, 
+             self.alarm_trigger_level,
              branding.BRAND_CONSOLE,
              (self.cls == 'Host') and 'Server' or 'VM')
 
+
 class MemoryUsageAlarmETG(EmailTextGenerator):
+
     def __init__(self, cls, obj_uuid, value, alarm_trigger_period, alarm_trigger_level):
         if alarm_trigger_period is None:
             alarm_trigger_period = 60
@@ -193,7 +214,7 @@ class MemoryUsageAlarmETG(EmailTextGenerator):
     def generate_subject(self):
         pool_name = pool_name = get_pool_name()
         return '[%s] %s Alarm: Memory usage on %s "%s"' % (pool_name,
-                   branding.PRODUCT_BRAND, self.cls, self.params['name_label'])
+                                                           branding.PRODUCT_BRAND, self.cls, self.params['name_label'])
 
     def generate_body(self):
         return \
@@ -209,7 +230,9 @@ class MemoryUsageAlarmETG(EmailTextGenerator):
              self.alarm_trigger_level,
              branding.BRAND_CONSOLE)
 
+
 class DiskUsageAlarmETG(EmailTextGenerator):
+
     def __init__(self, cls, obj_uuid, value, alarm_trigger_period, alarm_trigger_level):
         if alarm_trigger_period is None:
             alarm_trigger_period = 60
@@ -224,8 +247,8 @@ class DiskUsageAlarmETG(EmailTextGenerator):
     def generate_subject(self):
         pool_name = get_pool_name()
         return '[%s] %s Alarm: Disk usage on VM "%s"' % (pool_name,
-                   branding.PRODUCT_BRAND, self.params['name_label'])
-    
+                                                         branding.PRODUCT_BRAND, self.params['name_label'])
+
     def generate_body(self):
         return \
             'Disk usage on VM "%s" has been on average %d B/s for the last %d seconds.\n' \
@@ -239,7 +262,9 @@ class DiskUsageAlarmETG(EmailTextGenerator):
              self.alarm_trigger_level,
              branding.BRAND_CONSOLE)
 
+
 class Dom0FSUsageAlarmETG(EmailTextGenerator):
+
     def __init__(self, cls, obj_uuid, value, alarm_trigger_level):
         if alarm_trigger_level is None:
             alarm_trigger_level = 0.9
@@ -253,8 +278,8 @@ class Dom0FSUsageAlarmETG(EmailTextGenerator):
     def generate_subject(self):
         pool_name = get_pool_name()
         return '[%s] %s Alarm: Filesystem nearly full on "%s"' % (pool_name,
-                   branding.PRODUCT_BRAND, self.params['name_label'])
-    
+                                                                  branding.PRODUCT_BRAND, self.params['name_label'])
+
     def generate_body(self):
         return \
             'The filesystem usage on "%s" is at %.1f%%.\n' \
@@ -264,7 +289,9 @@ class Dom0FSUsageAlarmETG(EmailTextGenerator):
              self.value * 100.0,
              self.alarm_trigger_level * 100.0)
 
+
 class Dom0LogFSUsageAlarmETG(EmailTextGenerator):
+
     def __init__(self, cls, obj_uuid, value, alarm_trigger_level):
         if alarm_trigger_level is None:
             alarm_trigger_level = 0.9
@@ -278,7 +305,7 @@ class Dom0LogFSUsageAlarmETG(EmailTextGenerator):
     def generate_subject(self):
         pool_name = get_pool_name()
         return '[%s] %s Alarm: Log partition nearly full on "%s"' % (pool_name,
-                   branding.PRODUCT_BRAND, self.params['name_label'])
+                                                                     branding.PRODUCT_BRAND, self.params['name_label'])
 
     def generate_body(self):
         return \
@@ -289,7 +316,9 @@ class Dom0LogFSUsageAlarmETG(EmailTextGenerator):
              self.value * 100.0,
              self.alarm_trigger_level * 100.0)
 
+
 class Dom0MemUsageAlarmETG(EmailTextGenerator):
+
     def __init__(self, cls, obj_uuid, value, alarm_trigger_level):
         if alarm_trigger_level is None:
             alarm_trigger_level = 0.95
@@ -303,7 +332,7 @@ class Dom0MemUsageAlarmETG(EmailTextGenerator):
     def generate_subject(self):
         pool_name = get_pool_name()
         return '[%s] %s Alarm: Dom0 memory demand is high on "%s"' % (pool_name,
-                   branding.PRODUCT_BRAND, self.params['name_label'])
+                                                                      branding.PRODUCT_BRAND, self.params['name_label'])
 
     def generate_body(self):
         return \
@@ -315,7 +344,9 @@ class Dom0MemUsageAlarmETG(EmailTextGenerator):
              self.value * 100.0,
              self.alarm_trigger_level * 100.0)
 
+
 class WlbConsultationFailure(EmailTextGenerator):
+
     def __init__(self, cls, obj_uuid):
         self.cls = cls
         self.params = get_VM_params(obj_uuid)
@@ -323,16 +354,18 @@ class WlbConsultationFailure(EmailTextGenerator):
     def generate_subject(self):
         pool_name = get_pool_name()
         return '[%s] %s Alarm: Attempt to consult wlb for VM "%s" failed' % (self.params['name_label'],
-                   branding.PRODUCT_BRAND, pool_name)
-    
+                                                                             branding.PRODUCT_BRAND, pool_name)
+
     def generate_body(self):
         return \
             'A workload balancing consultation for VM %s failed.\n' \
             'The operation was completed using the default algorithm instead of a workload balancing recommendation.\n' \
             '\n' % \
             (self.params['name_label'])
-            
+
+
 class WlbOptimizationAlert(EmailTextGenerator):
+
     def __init__(self, optimization_mode, severity):
         self.optimization_mode = optimization_mode
         self.severity = severity
@@ -340,7 +373,7 @@ class WlbOptimizationAlert(EmailTextGenerator):
 
     def generate_subject(self):
         return 'Workload Balancing Alert: Optimization alert from pool %s' % (self.pool_name)
-    
+
     def generate_body(self):
         return \
             'The Workload Balancing server has reported that pool %s is in need of optimization.\n' \
@@ -350,16 +383,17 @@ class WlbOptimizationAlert(EmailTextGenerator):
              self.pool_name,
              self.optimization_mode,
              self.severity)
-            
+
 
 class HAHostFailedETG(EmailTextGenerator):
+
     def __init__(self, text):
         self.text = text
 
     def generate_subject(self):
         pool_name = get_pool_name()
         return '[%s] %s HA Alarm: %s' % (pool_name, branding.PRODUCT_BRAND, self.text)
-    
+
     def generate_body(self):
         return \
             '%s\n' \
@@ -367,26 +401,29 @@ class HAHostFailedETG(EmailTextGenerator):
             'This alarm is set to be triggered when a host belonging to a high availability pool fails.' \
             '\n' % self.text
 
+
 class XapiMessage:
+
     def __init__(self, xml):
         "Parse message XML"
         try:
             xmldoc = minidom.parseString(xml)
+
             def get_text(tag):
                 return xmldoc.getElementsByTagName(tag)[0].firstChild.toxml()
-            self.name      = get_text('name')
-            self.priority  = get_text('priority')
-            self.cls       = get_text('cls')
-            self.obj_uuid  = get_text('obj_uuid')
+            self.name = get_text('name')
+            self.priority = get_text('priority')
+            self.cls = get_text('cls')
+            self.obj_uuid = get_text('obj_uuid')
             self.timestamp = get_text('timestamp')
-            self.uuid      = get_text('uuid')
+            self.uuid = get_text('uuid')
         except:
             log_err("Badly formatted XML, or missing field")
             sys.exit(1)
         try:
-            self.body      = get_text('body')
+            self.body = get_text('body')
         except:
-            self.body      = ""
+            self.body = ""
         self.pool_name = get_pool_name()
 
     def get_priority(self):
@@ -401,48 +438,60 @@ class XapiMessage:
     def get_message(self, msg):
         # Extract the current level of the variable
         # (this will raise an exception if the 1st line of <body> is not in the correct format, namely "value: %f\n")
-        value_line = msg.split("\n",2)[0]
+        value_line = msg.split("\n", 2)[0]
         key, val = value_line.split(':', 2)
         assert(key == 'value')
         value = float(val)
 
         # Extract a few key config elements
         config_xml_escaped = msg.split("config:")[1]
-        config_xml = config_xml_escaped.replace('&gt;','>').replace('&lt;','<').replace('&quot;','"')
+        config_xml = config_xml_escaped.replace(
+            '&gt;', '>').replace('&lt;', '<').replace('&quot;', '"')
         config_xmldoc = minidom.parseString(config_xml)
-        def get_alarm_config(tag, cast):
-            try:   return cast(config_xmldoc.getElementsByTagName(tag)[0].getAttribute('value'))
-            except:return None
-        name                  = get_alarm_config('name',str)
-        alarm_trigger_level   = get_alarm_config('alarm_trigger_level',float)
-        alarm_trigger_period  = get_alarm_config('alarm_trigger_period',int)
 
-        return (value,name,alarm_trigger_level,alarm_trigger_period)
+        def get_alarm_config(tag, cast):
+            try:
+                return cast(config_xmldoc.getElementsByTagName(tag)[0].getAttribute('value'))
+            except:
+                return None
+        name = get_alarm_config('name', str)
+        alarm_trigger_level = get_alarm_config('alarm_trigger_level', float)
+        alarm_trigger_period = get_alarm_config('alarm_trigger_period', int)
+
+        return (value, name, alarm_trigger_level, alarm_trigger_period)
 
     def __get_email_text_generator(self):
         """Returns an EmailTextGenerator object appropriate to this XapiMessage or None if none found"""
-        if hasattr(self,'cached_etg'):
+        if hasattr(self, 'cached_etg'):
             return self.cached_etg
 
         if self.name == 'ALARM':
 
-            value, name, alarm_trigger_level, alarm_trigger_period = self.get_message(self.body)
+            value, name, alarm_trigger_level, alarm_trigger_period = self.get_message(
+                self.body)
 
             # Set the alarm text generator
             if name == 'cpu_usage':
-                etg = CpuUsageAlarmETG(self.cls, self.obj_uuid, value, alarm_trigger_period, alarm_trigger_level)
+                etg = CpuUsageAlarmETG(
+                    self.cls, self.obj_uuid, value, alarm_trigger_period, alarm_trigger_level)
             elif name == 'network_usage':
-                etg = NetworkUsageAlarmETG(self.cls, self.obj_uuid, value, alarm_trigger_period, alarm_trigger_level)
+                etg = NetworkUsageAlarmETG(
+                    self.cls, self.obj_uuid, value, alarm_trigger_period, alarm_trigger_level)
             elif name == 'memory_free_kib':
-                etg = MemoryUsageAlarmETG(self.cls, self.obj_uuid, value, alarm_trigger_period, alarm_trigger_level)
+                etg = MemoryUsageAlarmETG(
+                    self.cls, self.obj_uuid, value, alarm_trigger_period, alarm_trigger_level)
             elif name == 'disk_usage':
-                etg = DiskUsageAlarmETG(self.cls, self.obj_uuid, value, alarm_trigger_period, alarm_trigger_level)
+                etg = DiskUsageAlarmETG(
+                    self.cls, self.obj_uuid, value, alarm_trigger_period, alarm_trigger_level)
             elif name == 'fs_usage':
-                etg = Dom0FSUsageAlarmETG(self.cls, self.obj_uuid, value, alarm_trigger_level)
+                etg = Dom0FSUsageAlarmETG(
+                    self.cls, self.obj_uuid, value, alarm_trigger_level)
             elif name == 'log_fs_usage':
-                etg = Dom0LogFSUsageAlarmETG(self.cls, self.obj_uuid, value, alarm_trigger_level)
+                etg = Dom0LogFSUsageAlarmETG(
+                    self.cls, self.obj_uuid, value, alarm_trigger_level)
             elif name == 'mem_usage':
-                etg = Dom0MemUsageAlarmETG(self.cls, self.obj_uuid, value, alarm_trigger_level)
+                etg = Dom0MemUsageAlarmETG(
+                    self.cls, self.obj_uuid, value, alarm_trigger_level)
             else:
                 etg = None
         elif self.name == 'HA_HOST_FAILED':
@@ -453,7 +502,7 @@ class XapiMessage:
             severity_line = self.body.split()[0]
             severity = str(severity_line.split('severity:')[1])
             mode_line = self.body.split()[1]
-            optimization_mode = str(mode_line.split('mode:')[1])          
+            optimization_mode = str(mode_line.split('mode:')[1])
             etg = WlbOptimizationAlert(optimization_mode, severity)
         else:
             etg = None
@@ -468,25 +517,29 @@ class XapiMessage:
         else:
             return "[%s] %s Message: %s %s %s" % (self.pool_name, branding.PRODUCT_BRAND,
                                                   self.cls, self.obj_uuid, self.name)
-    
+
     def generate_email_body(self):
         generator = self.__get_email_text_generator()
         if generator:
             return generator.generate_body()
         else:
             try:
-                value, name, alarm_trigger_level, alarm_trigger_period = self.get_message(self.body)
+                value, name, alarm_trigger_level, alarm_trigger_period = self.get_message(
+                    self.body)
                 return \
                     "Field\t\tValue\n-----\t\t-----\nName:\t\t%s\nPriority:\t%s\nClass:\t\t%s\n" \
                     "Object UUID:\t%s\nTimestamp:\t%s\nMessage UUID:\t%s\nPool name:\t%s\nBody:\n" \
                     "Parameter=%s\nValue=%f\nAlarm trigger value=%s\nAlarm trigger period=%s" % \
-                    (self.name,self.priority,self.cls,self.obj_uuid,self.timestamp,self.uuid,self.pool_name,name,value,alarm_trigger_level,alarm_trigger_period)
+                    (self.name, self.priority, self.cls, self.obj_uuid, self.timestamp, self.uuid,
+                     self.pool_name, name, value, alarm_trigger_level, alarm_trigger_period)
             except:
-                msg = self.body.replace('&gt;','>').replace('&lt;','<').replace('&quot;','"')
+                msg = self.body.replace('&gt;', '>').replace(
+                    '&lt;', '<').replace('&quot;', '"')
                 return \
                     "Field\t\tValue\n-----\t\t-----\nName:\t\t%s\nPriority:\t%s\nClass:\t\t%s\n" \
                     "Object UUID:\t%s\nTimestamp:\t%s\nMessage UUID:\t%s\nPool name:\t%s\nBody:\t%s\n" % \
-                    (self.name,self.priority,self.cls,self.obj_uuid,self.timestamp,self.uuid,self.pool_name,msg)
+                    (self.name, self.priority, self.cls, self.obj_uuid,
+                     self.timestamp, self.uuid, self.pool_name, msg)
 
 
 def main():
@@ -517,7 +570,7 @@ def main():
         sender = "noreply@%s" % getfqdn().encode(charset)
 
     # Replace macros in config file using search_replace list
-    for s,r in search_replace:
+    for s, r in search_replace:
         config = config.replace(s, r)
 
     # Write out a temporary file containing the new config
@@ -527,11 +580,13 @@ def main():
         os.close(fd)
 
         # Run ssmtp to send mail
-        chld_stdin, chld_stdout = os.popen2(["/usr/sbin/ssmtp", "-C%s" % fname, destination])
+        chld_stdin, chld_stdout = os.popen2(
+            ["/usr/sbin/ssmtp", "-C%s" % fname, destination])
         chld_stdin.write("From: %s\n" % sender)
         chld_stdin.write('Content-Type: text/plain; charset="%s"\n' % charset)
         chld_stdin.write("To: %s\n" % destination.encode(charset))
-        chld_stdin.write("Subject: %s\n" % msg.generate_email_subject().encode(charset))
+        chld_stdin.write("Subject: %s\n" %
+                         msg.generate_email_subject().encode(charset))
         chld_stdin.write("\n")
         chld_stdin.write(msg.generate_email_body().encode(charset))
         chld_stdin.close()

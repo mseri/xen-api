@@ -4,8 +4,10 @@
 
 import atexit
 import XenAPI
-import os, sys
+import os
+import sys
 import getopt
+
 
 def logout():
     try:
@@ -14,13 +16,16 @@ def logout():
         pass
 atexit.register(logout)
 
+
 def usage():
     print >> sys.stderr, "%s [-d <directory>]" % sys.argv[0]
     sys.exit(1)
-   
+
+
 def main(argv):
     session = XenAPI.xapi_local()
-    session.xenapi.login_with_password("", "", "1.0", "xen-api-scripts-linkvmsbysr.py")
+    session.xenapi.login_with_password(
+        "", "", "1.0", "xen-api-scripts-linkvmsbysr.py")
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hd:", [])
@@ -29,13 +34,13 @@ def main(argv):
         usage()
 
     dir = None
-    for o,a in opts:
+    for o, a in opts:
         if o == "-d":
             dir = a
 
     if dir == None:
         usage()
- 
+
     vms = session.xenapi.VM.get_all_records()
     vbds = session.xenapi.VBD.get_all_records()
     vdis = session.xenapi.VDI.get_all_records()
@@ -79,7 +84,7 @@ def main(argv):
             if not vms_in_sr.has_key(sruuid):
                 vms_in_sr[sruuid] = {}
             vms_in_sr[sruuid][vmuuid] = 1
-    
+
     for sruuid in vms_in_sr.keys():
         linkdir = "%s/by-sr/%s" % (dir, sruuid)
         if os.path.isdir(linkdir):
@@ -96,11 +101,10 @@ def main(argv):
                 targ = "%s/%s.vmmeta" % (linkdir, vmuuid)
                 os.symlink(src, targ)
             except:
-                print >> sys.stderr, "Failed to create symlink: %s -> %s" % (src, targ)
+                print >> sys.stderr, "Failed to create symlink: %s -> %s" % (
+                    src, targ)
 
     session.xenapi.logout()
 
 if __name__ == "__main__":
     main(sys.argv[1:])
-
-

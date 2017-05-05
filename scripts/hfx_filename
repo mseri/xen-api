@@ -14,9 +14,17 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-import sys, os, socket, urllib2, urlparse, XenAPI, traceback, xmlrpclib
+import sys
+import os
+import socket
+import urllib2
+import urlparse
+import XenAPI
+import traceback
+import xmlrpclib
 
 db_url = "/remote_db_access"
+
 
 def rpc(session_id, request):
 
@@ -25,33 +33,34 @@ def rpc(session_id, request):
     try:
         # HTTP/1.0 with no transfer-encoding
         headers = [
-          "POST %s?session_id=%s HTTP/1.0" % (db_url, session_id),
-          "Connection:close",
-          "content-length:%d" % (len(request)),
-          ""
+            "POST %s?session_id=%s HTTP/1.0" % (db_url, session_id),
+            "Connection:close",
+            "content-length:%d" % (len(request)),
+            ""
         ]
-        #print "Sending HTTP request:"
+        # print "Sending HTTP request:"
         for h in headers:
-          s.send("%s\r\n" % h)
-          #print "%s\r\n" % h,
+            s.send("%s\r\n" % h)
+            # print "%s\r\n" % h,
         s.send(request)
 
         result = s.recv(1024)
-        #print "Received HTTP response:"
-        #print result
+        # print "Received HTTP response:"
+        # print result
         if "200 OK" not in result:
-          print >>sys.stderr, "Expected an HTTP 200, got %s" % result
-          return
+            print >>sys.stderr, "Expected an HTTP 200, got %s" % result
+            return
         id = result.find("\r\n\r\n")
         headers = result[:id]
         for line in headers.split("\r\n"):
-          cl = "content-length:"
-          if line.lower().startswith(cl):
-             length = int(line[len(cl):].strip())
-        body = result[id+4:]
+            cl = "content-length:"
+            if line.lower().startswith(cl):
+                length = int(line[len(cl):].strip())
+        body = result[id + 4:]
         return body
     finally:
         s.close()
+
 
 def parse_string(txt):
     prefix = "<value><array><data><value>success</value><value>"
@@ -61,16 +70,20 @@ def parse_string(txt):
     suffix = "</value></data></array></value>"
     if not txt.endswith(suffix):
         raise "Unable to parse string response"
-    txt = txt[:len(txt)-len(suffix)]
+    txt = txt[:len(txt) - len(suffix)]
     return txt
 
+
 def db_get_by_uuid(session_id, table, uuid):
-    request = "<value><array><data><value>db_get_by_uuid</value><value/><value><array><data><value>%s</value><value>%s</value></data></array></value></data></array></value>" % (table, uuid)
+    request = "<value><array><data><value>db_get_by_uuid</value><value/><value><array><data><value>%s</value><value>%s</value></data></array></value></data></array></value>" % (
+        table, uuid)
     response = parse_string(rpc(session_id, request))
     return response
 
+
 def read_field(session_id, table, fld, rf):
-    request = "<value><array><data><value>read_field</value><value/><value><array><data><value>%s</value><value>%s</value><value>%s</value></data></array></value></data></array></value>" % (table, fld, rf)
+    request = "<value><array><data><value>read_field</value><value/><value><array><data><value>%s</value><value>%s</value><value>%s</value></data></array></value></data></array></value>" % (
+        table, fld, rf)
     response = parse_string(rpc(session_id, request))
     return response
 

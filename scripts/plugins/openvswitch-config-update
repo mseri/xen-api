@@ -34,6 +34,8 @@ preinstalled_cacert = '/etc/stunnel/certs/sdn-controller-ca.pem'
 iptablectl = '/etc/xapi.d/plugins/firewall-port'
 
 # Delete the CA certificate, so that we go back to boot-strapping mode
+
+
 def delete_cacert():
     try:
         os.remove(bootstrap_cacert)
@@ -62,10 +64,14 @@ def update(session, args):
     controllers = session.xenapi.SDN_controller.get_all()
     if len(controllers) > 0:
         # There is at most one SDN_controller record.
-        controller_protocol = session.xenapi.SDN_controller.get_protocol(controllers[0])
-        controller_address = session.xenapi.SDN_controller.get_address(controllers[0])
-        controller_port = session.xenapi.SDN_controller.get_port(controllers[0])
-        bootstrap, controller = composeController(controller_protocol, controller_address, controller_port)
+        controller_protocol = session.xenapi.SDN_controller.get_protocol(controllers[
+                                                                         0])
+        controller_address = session.xenapi.SDN_controller.get_address(controllers[
+                                                                       0])
+        controller_port = session.xenapi.SDN_controller.get_port(controllers[
+                                                                 0])
+        bootstrap, controller = composeController(
+            controller_protocol, controller_address, controller_port)
 
     ret_str = ''
     currentControllers = vswitchCurrentControllers()
