@@ -81,7 +81,7 @@ if __name__ == "__main__":
                 address = 'localhost'
             else:
                 master = False
-                if options.address == None:
+                if options.address is None:
                     address = ls[1].strip()
                 else:
                     address = options.address
@@ -92,7 +92,7 @@ if __name__ == "__main__":
 
     # Get the management device from the firstboot data if not specified by
     # the user
-    if options.device == None:
+    if options.device is None:
         try:
             conf = read_management_conf()
             device = conf['LABEL']
@@ -147,7 +147,7 @@ Type 'yes' to continue.
 Type 'no' to cancel.
 """
         res = raw_input(warning + '\n'.join(configuration) + confirmation)
-        if res <> 'yes':
+        if res != 'yes':
             sys.exit(1)
 
     # Update master's IP, if needed and given

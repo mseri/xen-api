@@ -113,7 +113,7 @@ def host_evacuate(session, host):
     timeout = 240
     try:
         timeout = max(estimate_evacuate_timeout(session, host), timeout)
-    except Exception, e:
+    except Exception as e:
         syslog.syslog(syslog.LOG_WARNING,
                       "Evacuate timeout estimation error: %s, use default." % e)
     try:
@@ -277,7 +277,7 @@ if __name__ == "__main__":
     try:
         rc = main(new_session, uuid, force)
         sys.exit(rc)
-    except Exception, e:
+    except Exception as e:
         print "Caught %s" % str(e)
         sys.exit(1)
     finally:

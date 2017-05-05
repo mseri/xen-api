@@ -25,12 +25,12 @@ def main(session):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) <> 4:
+    if len(sys.argv) != 4:
         print "Usage:"
         print sys.argv[0], " <url> <username> <password>"
         sys.exit(1)
     url = sys.argv[1]
-    if url[:5] <> "https":
+    if url[:5] != "https":
         raise "Must use SSL for a realistic test"
 
     username = sys.argv[2]

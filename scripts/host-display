@@ -88,8 +88,7 @@ COMMANDS = {
 
 def usage():
     """ Display a usage string. """
-    command_names = COMMANDS.keys()
-    command_names.sort()
+    command_names = sorted(COMMANDS.keys())
     print "Usage:"
     print "    %s {%s}" % (sys.argv[0], '|'.join(command_names))
 

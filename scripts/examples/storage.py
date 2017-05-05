@@ -34,7 +34,7 @@ root = "/sr/"
 
 def run(task, cmd):
     code, output = commands.getstatusoutput(cmd)
-    if code <> 0:
+    if code != 0:
         log("%s: %s exitted with code %d: %s" % (task, cmd, code, output))
         raise (BackendError("command failed", [str(code), output]))
     log("%s: %s" % (task, cmd))
@@ -50,7 +50,7 @@ class Loop:
         global root
         for line in run(task, "losetup -a").split("\n"):
             line = line.strip()
-            if line <> "":
+            if line != "":
                 bits = line.split()
                 loop = bits[0][0:-1]
                 this_path = bits[2][1:-1]

@@ -96,7 +96,7 @@ def process_metrics_event(session, ref):
     other = {}
     try:
         other = session.xenapi.VM_guest_metrics.get_other(ref)
-    except Exception, e:
+    except Exception as e:
         print repr(e)
 
     if "feature-shutdown" in other.keys():

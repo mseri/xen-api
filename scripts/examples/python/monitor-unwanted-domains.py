@@ -21,7 +21,7 @@ def list_paused_domains():
     lines = all.split("\n")
     for domain in lines[1:]:
         bits = domain.split()
-        if bits <> []:
+        if bits != []:
             domid = bits[0]
             uuid = bits[2]
             state = bits[4]
@@ -33,7 +33,8 @@ def list_paused_domains():
 # be somewhere else i.e. we think it may have leaked here
 
 
-def should_domain_be_somewhere_else(localhost_uuid, (domid, uuid)):
+def should_domain_be_somewhere_else(localhost_uuid, domid_and_uuid):
+    (domid, uuid) = domid_and_uuid
     try:
         x = XenAPI.xapi_local()
         x.xenapi.login_with_password(
@@ -43,12 +44,12 @@ def should_domain_be_somewhere_else(localhost_uuid, (domid, uuid)):
                 vm = x.xenapi.VM.get_by_uuid(uuid)
                 resident_on = x.xenapi.VM.get_resident_on(vm)
                 current_operations = x.xenapi.VM.get_current_operations(vm)
-                result = current_operations == {} and resident_on <> localhost_uuid
+                result = current_operations == {} and resident_on != localhost_uuid
                 if result:
                     log("domid %s uuid %s: is not being operated on and is not resident here" % (
                         domid, uuid))
                     return result
-            except XenAPI.Failure, e:
+            except XenAPI.Failure as e:
                 if e.details[0] == "UUID_INVALID":
                     # VM is totally bogus
                     log("domid %s uuid %s: is not in the xapi database" %
@@ -68,7 +69,8 @@ def log(str):
 # Destroy the given domain
 
 
-def destroy_domain((domid, uuid)):
+def destroy_domain(domid_and_uuid):
+    (domid, uuid) = domid_and_uuid
     log("destroying domid %s uuid %s" % (domid, uuid))
     all = subprocess.Popen(["@OPTDIR@/debug/destroy_domain",
                             "-domid", domid], stdout=subprocess.PIPE).communicate()[0]

@@ -104,9 +104,9 @@ def make_vdi_info(v):
     global vdi_info_types
     for k in vdi_info_types.keys():
         t = vdi_info_types[k]
-        if t == type(""):
+        if isinstance("", t):
             v[k] = str(v[k])
-        elif t == type(True):
+        elif isinstance(True, t):
             v[k] = str(v[k]).lower() == "true"
         else:
             raise (BackendError("make_vdi_info unknown type", [str(t)]))
@@ -119,24 +119,24 @@ def vdi_info(v):
         if k not in v:
             raise (BackendError("vdi_info missing key", [k, repr(v)]))
         t = vdi_info_types[k]
-        if type(v[k]) <> t:
+        if not isinstance(v[k], t):
             raise (BackendError("vdi_info key has wrong type",
                                 [k, str(t), str(type(v[k]))]))
     return v
 
 
 def expect_none(x):
-    if x <> None:
+    if x is not None:
         raise (BackendError("type error", ["None", repr(x)]))
 
 
 def expect_long(x):
-    if type(x) <> type(0L):
+    if not isinstance(x, type(0)):
         raise (BackendError("type error", ["long int", repr(x)]))
 
 
 def expect_string(x):
-    if type(x) <> type(""):
+    if not isinstance(x, type("")):
         raise (BackendError("type error", ["string", repr(x)]))
 
 # Well-known feature flags understood by xapi ##############################
@@ -250,14 +250,14 @@ class Marshall:
                 return self.vdi_deactivate(args)
             elif method == "VDI.detach":
                 return self.vdi_detach(args)
-        except BackendError, e:
+        except BackendError as e:
             log("caught %s" % e)
             traceback.print_exc()
             return value(backend_error(e.code, e.params))
-        except Vdi_does_not_exist, e:
+        except Vdi_does_not_exist as e:
             log("caught %s" % e)
             return value(vdi_does_not_exist())
-        except Exception, e:
+        except Exception as e:
             log("caught %s" % e)
             traceback.print_exc()
             return value(internal_error(str(e)))
@@ -271,7 +271,7 @@ def daemonize():
             if os.fork() > 0:
                 # parent
                 sys.exit(0)
-        except Exception, e:
+        except Exception as e:
             print >>sys.stderr, "fork() failed: %s" % e
             traceback.print_exc()
             raise

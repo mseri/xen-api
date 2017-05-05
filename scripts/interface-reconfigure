@@ -127,19 +127,21 @@ def netdev_remap_name(pif, already_renamed=[]):
             file = open(name, 'r')
             return file.readline().rstrip('\n')
         finally:
-            if file != None:
+            if file is not None:
                 file.close()
 
     def get_netdev_mac(device):
         try:
-            return read1("%s/sys/class/net/%s/address" % (root_prefix(), device))
+            return read1("%s/sys/class/net/%s/address" %
+                         (root_prefix(), device))
         except:
             # Probably no such device.
             return None
 
     def get_netdev_tx_queue_len(device):
         try:
-            return int(read1("%s/sys/class/net/%s/tx_queue_len" % (root_prefix(), device)))
+            return int(read1("%s/sys/class/net/%s/tx_queue_len" %
+                             (root_prefix(), device)))
         except:
             # Probably no such device.
             return None
@@ -258,7 +260,7 @@ def ipdev_configure_static_routes(interface, oc, f):
           172.16.0.0/15 via 192.168.0.3 dev xenbr1
           172.18.0.0/16 via 192.168.0.4 dev xenbr1
     """
-    if oc.has_key('static-routes'):
+    if 'static-routes' in oc:
         # The key is present - extract comma seperates entries
         lines = oc['static-routes'].split(',')
     else:
@@ -279,7 +281,7 @@ def ipdev_configure_static_routes(interface, oc, f):
         f.attach_child(child)
         child.close()
 
-    except ValueError, e:
+    except ValueError as e:
         log("Error in other-config['static-routes'] format for network %s: %s" %
             (interface, e))
 
@@ -329,7 +331,7 @@ def ipdev_configure_network(pif, dp):
     log("Configuring %s using %s configuration" % (ipdev, mode))
 
     oc = None
-    if pifrec.has_key('other_config'):
+    if 'other_config' in pifrec:
         oc = pifrec['other_config']
 
     dp.configure_ipdev(f)
@@ -348,7 +350,7 @@ def ipdev_configure_network(pif, dp):
         raise Error("Unknown ip-configuration-mode %s" %
                     pifrec['ip_configuration_mode'])
 
-    if nwrec.has_key('other_config'):
+    if 'other_config' in nwrec:
         settings, offload = ethtool_settings(nwrec['other_config'])
         if len(settings):
             f.write("ETHTOOL_OPTS=\"%s\"\n" % str.join(" ", settings))
@@ -361,11 +363,11 @@ def ipdev_configure_network(pif, dp):
     if mtu:
         f.write("MTU=%s\n" % mtu)
 
-    if pifrec.has_key('DNS') and pifrec['DNS'] != "":
+    if 'DNS' in pifrec and pifrec['DNS'] != "":
         ServerList = pifrec['DNS'].split(",")
         for i in range(len(ServerList)):
             f.write("DNS%d=%s\n" % (i + 1, ServerList[i]))
-    if oc and oc.has_key('domain'):
+    if oc and 'domain' in oc:
         f.write("DOMAIN='%s'\n" % oc['domain'].replace(',', ' '))
 
     # There can be only one DNSDEV and one GATEWAYDEV in /etc/sysconfig/network.
@@ -401,14 +403,14 @@ def ipdev_configure_network(pif, dp):
     for __pif in pifs_on_host:
         __pifrec = db().get_pif_record(__pif)
         __oc = __pifrec['other_config']
-        if __oc.has_key('peerdns') and __oc['peerdns'] == 'true':
-            if peerdns_pif == None:
+        if 'peerdns' in __oc and __oc['peerdns'] == 'true':
+            if peerdns_pif is None:
                 peerdns_pif = __pif
             else:
                 log('Warning: multiple pifs with "peerdns=true" - choosing %s and ignoring %s' %
                     (db().get_pif_record(peerdns_pif)['device'], __pifrec['device']))
-        if __oc.has_key('defaultroute') and __oc['defaultroute'] == 'true':
-            if defaultroute_pif == None:
+        if 'defaultroute' in __oc and __oc['defaultroute'] == 'true':
+            if defaultroute_pif is None:
                 defaultroute_pif = __pif
             else:
                 log('Warning: multiple pifs with "defaultroute=true" - choosing %s and ignoring %s' %
@@ -416,9 +418,9 @@ def ipdev_configure_network(pif, dp):
 
     # If no pif is explicitly specified then use the mgmt pif for
     # peerdns/defaultroute.
-    if peerdns_pif == None:
+    if peerdns_pif is None:
         peerdns_pif = management_pif
-    if defaultroute_pif == None:
+    if defaultroute_pif is None:
         defaultroute_pif = management_pif
 
     is_dnsdev = peerdns_pif == pif
@@ -489,7 +491,7 @@ def action_up(pif, force):
         os.system(root_prefix() + "/sbin/update-issue")
 
         f.commit()
-    except Error, e:
+    except Error as e:
         log("failed to apply changes: %s" % e.msg)
         f.revert()
         raise
@@ -546,7 +548,7 @@ def action_force_rewrite(bridge, config):
     elif mode != 'dhcp':
         raise Usage("--mode must be either static or dhcp")
 
-    if config.has_key('vlan'):
+    if 'vlan' in config:
         is_vlan = True
         vlan_slave, vlan_vid = config['vlan'].split('.')
     else:
@@ -610,7 +612,7 @@ def action_force_rewrite(bridge, config):
     try:
         f.apply()
         f.commit()
-    except Error, e:
+    except Error as e:
         log("failed to apply changes: %s" % e.msg)
         f.revert()
         raise
@@ -642,7 +644,7 @@ def main(argv=None):
                        "no-syslog",
                        "help"]
             arglist, args = getopt.gnu_getopt(argv[1:], shortops, longops)
-        except getopt.GetoptError, msg:
+        except getopt.GetoptError as msg:
             raise Usage(msg)
 
         force_rewrite_config = {}
@@ -753,11 +755,11 @@ def main(argv=None):
             # Save cache.
             db().save(dbcache_file)
 
-    except Usage, err:
+    except Usage as err:
         print >>sys.stderr, err.msg
         print >>sys.stderr, "For help use --help."
         return 2
-    except Error, err:
+    except Error as err:
         log(err.msg)
         return 1
 

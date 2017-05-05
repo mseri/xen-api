@@ -74,7 +74,7 @@ class Failure(Exception):
     def __str__(self):
         try:
             return str(self.details)
-        except Exception, exn:
+        except Exception as exn:
             print >>sys.stderr, exn
             return "Xen-API failure: %s" % str(self.details)
 
@@ -189,7 +189,7 @@ class Session(xmlrpclib.ServerProxy):
             self.last_login_method = method
             self.last_login_params = params
             self.API_version = self._get_api_version()
-        except socket.error, e:
+        except socket.error as e:
             if e.errno == socket.errno.ETIMEDOUT:
                 raise xmlrpclib.Fault(504, 'The connection timed out')
             else:
@@ -232,7 +232,7 @@ def xapi_local():
 
 
 def _parse_result(result):
-    if type(result) != dict or 'Status' not in result:
+    if not isinstance(result, dict) or 'Status' not in result:
         raise xmlrpclib.Fault(
             500, 'Missing Status in response from server' + result)
     if result['Status'] == 'Success':
@@ -270,7 +270,8 @@ class _Dispatcher:
         if self.__name is None:
             return _Dispatcher(self.__API_version, self.__send, name)
         else:
-            return _Dispatcher(self.__API_version, self.__send, "%s.%s" % (self.__name, name))
+            return _Dispatcher(self.__API_version, self.__send,
+                               "%s.%s" % (self.__name, name))
 
     def __call__(self, *args):
         return self.__send(self.__name, args)

@@ -32,7 +32,7 @@ def reopenlog(log_file):
     global log_f
     if log_f:
         log_f.close()
-    if log_file and log_file <> "stdout:":
+    if log_file and log_file != "stdout:":
         log_f = open(log_file, "aw")
     elif log_file and log_file == "stdout:":
         log_f = os.fdopen(os.dup(sys.stdout.fileno()), "aw")
@@ -119,7 +119,7 @@ def import_metadata(server, session, filename):
 
     def getSingleElement(doc, name):
         elements = doc.getElementsByTagName(name)
-        if len(elements) <> 1:
+        if len(elements) != 1:
             raise Failure("Expecting exactly one <%s> element" % name)
         return elements[0]
     image = getSingleElement(doc, "image")
@@ -130,7 +130,7 @@ def import_metadata(server, session, filename):
 
     def getText(doc, name):
         nodes = doc.getElementsByTagName(name)
-        if len(nodes) <> 1:
+        if len(nodes) != 1:
             print >>sys.stderr, "Expecting exactly one %s tag" % name
             sys.exit(1)
         result = ""
@@ -147,7 +147,7 @@ def import_metadata(server, session, filename):
     # Clone the "Other install media" template and inherit basic
     # properties from it.
     templates = value(server.VM.get_by_name_label(session, base_template))
-    if len(templates) <> 1:
+    if len(templates) != 1:
         raise Failure("Expecting exactly one \"%s\" template" % base_template)
     template = templates[0]
     name = getText(image, "name")
@@ -155,14 +155,14 @@ def import_metadata(server, session, filename):
     vm = value(server.VM.clone(session, template, name))
     value(server.VM.set_is_a_template(session, vm, False))
     vcpu = getText(devices, "vcpu")
-    if vcpu <> "":
+    if vcpu != "":
         log("Setting number of vCPUs to: %s" % vcpu)
         value(server.VM.set_VCPUs_max(session, vm, vcpu))
         value(server.VM.set_VCPUs_at_startup(session, vm, vcpu))
     memory = getText(devices, "memory")  # KiB
-    if memory <> "":
+    if memory != "":
         log("Setting memory to %s KiB" % memory)
-        bytes = str(long(memory) * 1024L)
+        bytes = str(long(memory) * 1024)
         value(server.VM.set_memory_limits(
             session, vm, "0", bytes, bytes, bytes))
     boot_type = getAttr(boot, "type")
@@ -178,13 +178,13 @@ def import_metadata(server, session, filename):
     try:
         log("Will create disks in the default SR: %s" %
             (value(server.SR.get_name_label(session, sr))))
-    except Exception, e:
+    except Exception as e:
         log("Caught %s" % str(e))
         raise Failure("Default SR is not set on the pool (%s)" % sr)
     vdis = {}
     for disk in disks:
         ty = getAttr(disk, "format")
-        if ty <> "raw":
+        if ty != "raw":
             raise Failure("Expected all disks to have format = raw")
         filename = getAttr(disk, "file")
         size = os.path.getsize(filename)
@@ -237,7 +237,7 @@ def import_vdi(url, session, vdi, filename):
         CURL, filename, url, session, vdi)
     log("%s" % cmd)
     (code, output) = commands.getstatusoutput(cmd)
-    if code <> 0:
+    if code != 0:
         log("Disk upload failed: %s" % output)
         raise Failure("disk upload failed")
 

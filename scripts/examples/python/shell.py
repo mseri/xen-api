@@ -86,12 +86,12 @@ if __name__ == "__main__":
         print sys.argv[0], " <url> <username> <password>"
         sys.exit(1)
 
-    if sys.argv[1] <> "-" and len(sys.argv) < 4:
+    if sys.argv[1] != "-" and len(sys.argv) < 4:
         print "Usage:"
         print sys.argv[0], " <url> <username> <password>"
         sys.exit(1)
 
-    if sys.argv[1] <> "-":
+    if sys.argv[1] != "-":
         url = sys.argv[1]
         username = sys.argv[2]
         password = sys.argv[3]
@@ -112,10 +112,10 @@ if __name__ == "__main__":
         params = [munge_types(x) for x in sys.argv[(cmdAt + 1):]]
         try:
             print >> sys.stdout, session.xenapi_request(cmd, tuple(params))
-        except XenAPI.Failure, x:
+        except XenAPI.Failure as x:
             print >> sys.stderr, x
             sys.exit(2)
-        except Exception, e:
+        except Exception as e:
             print >> sys.stderr, e
             sys.exit(3)
         sys.exit(0)

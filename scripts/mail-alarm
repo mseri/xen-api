@@ -104,12 +104,12 @@ def get_search_replace(other_config):
 
 
 def get_destination(other_config):
-    if other_config.has_key('mail-destination'):
+    if 'mail-destination' in other_config:
         return other_config['mail-destination']
 
 
 def get_sender(other_config):
-    if other_config.has_key('mail-sender'):
+    if 'mail-sender' in other_config:
         return other_config['mail-sender']
 
 
@@ -126,7 +126,8 @@ class EmailTextGenerator:
 
 class CpuUsageAlarmETG(EmailTextGenerator):
 
-    def __init__(self, cls, obj_uuid, value, alarm_trigger_period, alarm_trigger_level):
+    def __init__(self, cls, obj_uuid, value,
+                 alarm_trigger_period, alarm_trigger_level):
         if alarm_trigger_period is None:
             alarm_trigger_period = 60
         if cls == 'Host':
@@ -134,7 +135,7 @@ class CpuUsageAlarmETG(EmailTextGenerator):
         elif cls == 'VM':
             self.params = get_VM_params(obj_uuid)
         else:
-            raise Exception, "programmer error"
+            raise Exception("programmer error")
         self.cls = cls
         self.value = value
         self.alarm_trigger_period = alarm_trigger_period
@@ -163,7 +164,8 @@ class CpuUsageAlarmETG(EmailTextGenerator):
 
 class NetworkUsageAlarmETG(EmailTextGenerator):
 
-    def __init__(self, cls, obj_uuid, value, alarm_trigger_period, alarm_trigger_level):
+    def __init__(self, cls, obj_uuid, value,
+                 alarm_trigger_period, alarm_trigger_level):
         if alarm_trigger_period is None:
             alarm_trigger_period = 60
         if cls == 'Host':
@@ -171,7 +173,7 @@ class NetworkUsageAlarmETG(EmailTextGenerator):
         elif cls == 'VM':
             self.params = get_VM_params(obj_uuid)
         else:
-            raise Exception, "programmer error"
+            raise Exception("programmer error")
         self.cls = cls
         self.value = value
         self.alarm_trigger_period = alarm_trigger_period
@@ -544,7 +546,7 @@ class XapiMessage:
 
 def main():
     other_config = get_pool_other_config()
-    if other_config.has_key('mail-min-priority'):
+    if 'mail-min-priority' in other_config:
         min_priority = int(other_config['mail-min-priority'])
     else:
         min_priority = 3

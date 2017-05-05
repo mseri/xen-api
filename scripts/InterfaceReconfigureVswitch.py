@@ -58,7 +58,7 @@ def netdev_get_driver_name(netdev):
     symlink = '%s/sys/class/net/%s/device/driver' % (root_prefix(), netdev)
     try:
         target = os.readlink(symlink)
-    except OSError, e:
+    except OSError as e:
         log("%s: could not read netdev's driver name (%s)" % (netdev, e))
         return None
 
@@ -777,7 +777,7 @@ def vswitchCfgQuery(action_args):
     cmd = ['%s/usr/bin/ovs-vsctl' % root_prefix(),
            '--timeout=5', '-vANY:console:off'] + action_args
     output = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()
-    if len(output) == 0 or output[0] == None:
+    if len(output) == 0 or output[0] is None:
         output = ""
     else:
         output = output[0].strip()

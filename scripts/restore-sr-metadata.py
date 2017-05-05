@@ -35,7 +35,7 @@ def main(argv):
 
     try:
         opts, args = getopt.getopt(argv, "hf:u:", [])
-    except getopt.GetoptError, err:
+    except getopt.GetoptError as err:
         print str(err)
         usage()
 
@@ -47,7 +47,7 @@ def main(argv):
         if o == "-u":
             sruuid = a
 
-    if infile == None:
+    if infile is None:
         usage()
 
     try:

@@ -46,7 +46,7 @@ class SuspendResume(Operation):
             x = server.VM.suspend(session_id, self.vm)
             if "ErrorDescription" in x:
                 time.sleep(1)
-        if x["Status"] <> "Success":
+        if x["Status"] != "Success":
             return x
         return server.VM.resume(session_id, self.vm, False, False)
 
@@ -61,7 +61,7 @@ class ShutdownStart(Operation):
 
     def execute(self, server, session_id):
         x = server.VM.clean_shutdown(session_id, self.vm)
-        if x["Status"] <> "Success":
+        if x["Status"] != "Success":
             return x
         return server.VM.start(session_id, self.vm, False, False)
         # return { "Status": "bad", "ErrorDescription": "foo" }
@@ -126,7 +126,7 @@ def make_operation_list(vm):
     return [Reboot(vm), SuspendResume(vm), LocalhostMigrate(vm)] * 100
 
 if __name__ == "__main__":
-    if len(sys.argv) <> 3:
+    if len(sys.argv) != 3:
         print "Usage:"
         print "  %s <URL> <other-config key>" % (sys.argv[0])
         print "  -- performs parallel operations on VMs with the specified other-config key"
@@ -140,7 +140,7 @@ if __name__ == "__main__":
 
     workers = []
     for vm in vms.keys():
-        if vms[vm]["other_config"].has_key(key):
+        if key in vms[vm]["other_config"]:
             allowed_ops = vms[vm]["allowed_operations"]
             for op in ["clean_reboot", "suspend", "pool_migrate"]:
                 if op not in allowed_ops:

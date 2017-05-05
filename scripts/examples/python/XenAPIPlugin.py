@@ -29,7 +29,7 @@ def failure_message(description):
 
 
 def dispatch(fn_table):
-    if len(sys.argv) <> 2:
+    if len(sys.argv) != 2:
         raise "Incorrect number of commandline arguments"
     params, methodname = xmlrpclib.loads(sys.argv[1])
     session_id = params[0]
@@ -44,9 +44,9 @@ def dispatch(fn_table):
             # SystemExit should not be caught, as it is handled elsewhere in
             # the plugin system.
             raise
-        except Failure, e:
+        except Failure as e:
             print failure_message(e.params)
-        except Exception, e:
+        except Exception as e:
             print failure_message(['XENAPI_PLUGIN_FAILURE',
                                    methodname, e.__class__.__name__, str(e)])
     else:

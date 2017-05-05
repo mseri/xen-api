@@ -24,7 +24,7 @@ def usage():
 
 
 def set_if_exists(xml, record, key):
-    if record.has_key(key):
+    if key in record:
         xml.setAttribute(key, record[key])
     else:
         xml.setAttribute(key, "")
@@ -37,7 +37,7 @@ def main(argv):
 
     try:
         opts, args = getopt.getopt(argv, "hf:", [])
-    except getopt.GetoptError, err:
+    except getopt.GetoptError as err:
         print str(err)
         usage()
 
@@ -46,7 +46,7 @@ def main(argv):
         if o == "-f":
             outfile = a
 
-    if outfile == None:
+    if outfile is None:
         usage()
 
     f = codecs.open(outfile, 'w', encoding="utf-8")

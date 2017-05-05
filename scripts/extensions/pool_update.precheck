@@ -97,7 +97,8 @@ def parse_control_package(session, yum_url):
     return items[0].getAttribute('control')
 
 
-def execute_precheck(session, control_package, yum_conf_file, update_precheck_file):
+def execute_precheck(session, control_package,
+                     yum_conf_file, update_precheck_file):
     if not control_package:
         return 'ok'
     livepatch_messages = {'PATCH_PRECHECK_LIVEPATCH_COMPLETE': 'ok_livepatch_complete',

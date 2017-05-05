@@ -77,7 +77,7 @@ class PamSshConfig:
     def add_subject(self, sid):
         # Add a subject to the temporary file
         if self.installed:
-            raise Exception, "Cannot add subject once installed "
+            raise Exception("Cannot add subject once installed ")
         lines = commands.getoutput(
             "/opt/pbis/bin/find-by-sid %s" % sid).split("\n")
         name_lines = filter(lambda x: x.startswith("Name:"), lines)

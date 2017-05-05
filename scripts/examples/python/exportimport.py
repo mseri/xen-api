@@ -52,7 +52,7 @@ def exportimport(url, xapi, session, src_vdi, dst_vdi):
         # chunked so we must send the data raw.
         url = urlparse.urlparse(url)
         host = url.netloc.split(":")[0]  # assume port 443
-        if url.scheme <> "https":
+        if url.scheme != "https":
             print >>sys.stderr, "Sorry, this example only supports HTTPS (not HTTP)"
             print >>sys.stderr, "Plaintext HTTP has the following problems:"
             print >>sys.stderr, "  - the data can be captured by other programs on the network"
@@ -86,7 +86,7 @@ def exportimport(url, xapi, session, src_vdi, dst_vdi):
         virtual_size = long(xapi.xenapi.VDI.get_virtual_size(src_vdi))
         print "Copying %Ld bytes" % virtual_size
         left = virtual_size
-        while left > 0L:
+        while left > 0:
             block = data.read(min(65536, left))
             if block is None:
                 break
@@ -100,15 +100,15 @@ def exportimport(url, xapi, session, src_vdi, dst_vdi):
         while not finished:
             import_status = xapi.xenapi.task.get_status(import_task)
             export_status = xapi.xenapi.task.get_status(export_task)
-            finished = import_status <> "pending" and export_task <> "pending"
+            finished = import_status != "pending" and export_task != "pending"
             time.sleep(1)
         if import_status == "success" and export_status == "success":
             print "OK"
         else:
             print "FAILED"
-            if import_status <> "success":
+            if import_status != "success":
                 print "The import task failed with: ", " ".join(xapi.xenapi.task.get_error_info(import_task))
-            if export_status <> "success":
+            if export_status != "success":
                 print "The export task failed with: ", " ".join(xapi.xenapi.task.get_error_info(export_task))
 
     finally:
@@ -117,7 +117,7 @@ def exportimport(url, xapi, session, src_vdi, dst_vdi):
         xapi.xenapi.task.destroy(export_task)
 
 if __name__ == "__main__":
-    if len(sys.argv) <> 5:
+    if len(sys.argv) != 5:
         print "Usage:"
         print sys.argv[0], " <url> <username> <password> <vdi-uuid>"
         print " -- creates a fresh VDI and streams the contents of <vdi-uuid> into it."
@@ -144,7 +144,7 @@ if __name__ == "__main__":
         vdi_args = xapi.xenapi.VDI.get_record(src_vdi)
         dst_vdi = xapi.xenapi.VDI.create(vdi_args)
         exportimport(url, xapi, xapi._session, src_vdi, dst_vdi)
-    except Exception, e:
+    except Exception as e:
         print "Caught %s: trying to clean up" % str(e)
         traceback.print_exc()
         if dst_vdi:

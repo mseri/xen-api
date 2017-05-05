@@ -17,7 +17,7 @@ def go(x, name):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) <> 2:
+    if len(sys.argv) != 2:
         print >>sys.stderr, "Usage:"
         print >>sys.stderr, " %s <VM name-label>" % (sys.argv[0])
         print >>sys.stderr, "     -- Call SR.lvhd_stop_using_these_vdis_and_call_script with all VDIs with VBDs (attached or not) linking to specified VM"

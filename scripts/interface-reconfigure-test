@@ -74,7 +74,7 @@ def interface_name(pif):
 def get_pif_by_uuid(uuid):
     try:
         pif = session.xenapi.PIF.get_by_uuid(uuid)
-    except XenAPI.Failure, err:
+    except XenAPI.Failure as err:
         raise Usage("Unknown PIF \"%s\": \"%s\"" % (uuid, err))
 
     return pif
@@ -457,69 +457,70 @@ is attached and detached.
 
         self.log("Attach a VLAN device")
         self.attach_pif(vlan)
-        self.assert_device_state(dev,  attached=False, up=True, bridge=None)
-        self.assert_device_state(vlan, attached=True,  up=True, bridge=True)
+        self.assert_device_state(dev, attached=False, up=True, bridge=None)
+        self.assert_device_state(vlan, attached=True, up=True, bridge=True)
 
         self.log("Attach the VLANs master")
         self.attach_pif(dev)
-        self.assert_device_state(dev,  attached=True, up=True, bridge=True)
+        self.assert_device_state(dev, attached=True, up=True, bridge=True)
         self.assert_device_state(vlan, attached=True, up=True, bridge=True)
 
         self.log("Detach the VLAN, the master should remain")
         self.detach_pif(vlan)
-        self.assert_device_state(dev,  attached=True,  up=True,  bridge=True)
+        self.assert_device_state(dev, attached=True, up=True, bridge=True)
         self.assert_device_state(vlan, attached=False, up=False, bridge=False)
         self.assert_device_exists(vlan, False)
 
         self.log("Detach the master")
         self.detach_pif(dev)
-        self.assert_device_state(dev,  attached=False, up=False, bridge=False)
+        self.assert_device_state(dev, attached=False, up=False, bridge=False)
         self.assert_device_state(vlan, attached=False, up=False, bridge=False)
         self.assert_device_exists(vlan, False)
 
         self.log("Reattach the VLAN")
         self.attach_pif(vlan)
-        self.assert_device_state(dev,  attached=False, up=True, bridge=None)
-        self.assert_device_state(vlan, attached=True,  up=True, bridge=True)
+        self.assert_device_state(dev, attached=False, up=True, bridge=None)
+        self.assert_device_state(vlan, attached=True, up=True, bridge=True)
 
         self.log("Get rid of the VLAN, master remains detached")
         self.detach_pif(vlan)
-        self.assert_device_state(dev,  attached=False, up=False, bridge=False)
+        self.assert_device_state(dev, attached=False, up=False, bridge=False)
         self.assert_device_state(vlan, attached=False, up=False, bridge=False)
         self.assert_device_exists(vlan, False)
 
         self.log("Attach the master. ")
         self.attach_pif(dev)
-        self.assert_device_state(dev,  attached=True,  up=True,  bridge=True)
+        self.assert_device_state(dev, attached=True, up=True, bridge=True)
         self.assert_device_state(vlan, attached=False, up=False, bridge=False)
         self.assert_device_exists(vlan, False)
 
         self.log("Attach the VLAN")
         self.attach_pif(vlan)
-        self.assert_device_state(dev,  attached=True, up=True, bridge=None)
+        self.assert_device_state(dev, attached=True, up=True, bridge=None)
         self.assert_device_state(vlan, attached=True, up=True, bridge=True)
 
         self.log("Detach the master, VLAN remains attached and master remains up")
         self.detach_pif(dev)
-        self.assert_device_state(dev,  attached=False, up=True, bridge=None)
-        self.assert_device_state(vlan, attached=True,  up=True, bridge=True)
+        self.assert_device_state(dev, attached=False, up=True, bridge=None)
+        self.assert_device_state(vlan, attached=True, up=True, bridge=True)
 
         self.log("Detach the VLAN, master goes away")
         self.detach_pif(vlan)
-        self.assert_device_state(dev,  attached=False, up=False, bridge=False)
+        self.assert_device_state(dev, attached=False, up=False, bridge=False)
         self.assert_device_state(vlan, attached=False, up=False, bridge=False)
 
         self.success()
 
 
 def cleanup():
-    if bond == None or slaves == None:
+    if bond is None or slaves is None:
         return
 
     all = [(pif, session.xenapi.PIF.get_record(pif))
            for pif in [bond] + slaves]
 
-    for (pif, rec) in [(pif, rec) for (pif, rec) in all if rec['currently_attached']]:
+    for (pif, rec) in [(pif, rec)
+                       for (pif, rec) in all if rec['currently_attached']]:
         print "cleanup: unplug %(uuid)s %(device)s" % rec
         session.xenapi.PIF.unplug(pif)
 
@@ -548,7 +549,7 @@ def main(argv=None):
             shortops = "ht:"
             longops = ["help"]
             arglist, args = getopt.gnu_getopt(argv[1:], shortops, longops)
-        except getopt.GetoptError, msg:
+        except getopt.GetoptError as msg:
             raise Usage(msg)
 
         for o, a in arglist:
@@ -610,11 +611,11 @@ def main(argv=None):
         for test in selected_tests:
             test.run()
 
-    except Failure, err:
+    except Failure as err:
         # print "FAILED"
         cleanup()
         return 1
-    except Usage, err:
+    except Usage as err:
         print >>sys.stderr, err.msg
         #print >>sys.stderr, "For help use --help."
         cleanup()

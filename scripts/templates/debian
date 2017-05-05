@@ -53,7 +53,7 @@ def run(cmd, *args):
         try:
             for line in out.split("\n"):
                 log("| " + line)
-        except TypeError, e:
+        except TypeError as e:
             pass
     if ret != 0:
         debug("run - command %s failed with %d", cmd, ret)
@@ -86,7 +86,7 @@ def create_partition(lvpath):
     # we don't care about.  Should fix to detect these cases
     # specifically.
     rc = pipe.close()
-    if rc == None:
+    if rc is None:
         rc = 0
         log("fdisk exited with rc %d (some non-zero exits can be ignored safely)." % rc)
 
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     xvdb = os.getenv("xvdb")
     debug("Guest's xvda is on %s" % xvda)
     debug("Guest's xvdb is on %s" % xvdb)
-    if xvda == None or xvdb == None:
+    if xvda is None or xvdb is None:
         raise "Need to pass in device names for xvda and xvdb through the environment"
 
     vm = os.getenv("vm")

@@ -73,7 +73,7 @@ def parseProvisionSpec(txt):
     """Return an instance of type ProvisionSpec given XML text"""
     doc = xml.dom.minidom.parseString(txt)
     all = doc.getElementsByTagName("provision")
-    if len(all) <> 1:
+    if len(all) != 1:
         raise "Expected to find exactly one <provision> element"
     ps = ProvisionSpec()
     disks = all[0].getElementsByTagName("disk")
@@ -118,6 +118,6 @@ if __name__ == "__main__":
     print "* Pretty-printing spec"
     txt2 = printProvisionSpec(ps)
     print txt2
-    if txt <> txt2:
+    if txt != txt2:
         raise "Sanity-check failed: print(parse(print(x))) <> print(x)"
     print "* OK: print(parse(print(x))) == print(x)"

@@ -63,7 +63,7 @@ def save(session, host, pifs):
         devices.append(pifs[ref]['device'][3:])
     for i in set(devices):
         devices.remove(i)
-    if devices <> []:
+    if devices != []:
         print "ERROR: cannot assign two interfaces the same NIC number (%s)" % (", ".join(i))
         print "Aborted."
         sys.exit(1)
@@ -79,7 +79,7 @@ def save(session, host, pifs):
             plural = "s"
         print "WARNING: this operation requires unplugging %d guest network interface%s" % (len(vifs), plural)
         print "Are you sure you want to continue? (yes/no) > ",
-        if sys.stdin.readline().strip().lower() <> "yes":
+        if sys.stdin.readline().strip().lower() != "yes":
             print "Aborted."
             sys.exit(1)
     for vif in vifs:
@@ -123,12 +123,12 @@ def renameif(session):
     host = session.xenapi.host.get_by_uuid(uuid)
     pool = session.xenapi.pool.get_all()[0]
     master = session.xenapi.pool.get_master(pool)
-    if host <> master:
+    if host != master:
         warn("This host is a slave; it is not possible to rename the management interface")
 
     pifs = session.xenapi.PIF.get_all_records()
     for ref in pifs.keys():
-        if pifs[ref]['host'] <> host or pifs[ref]['physical'] <> True:
+        if pifs[ref]['host'] != host or pifs[ref]['physical'] != True:
             del pifs[ref]
 
     while True:
@@ -142,16 +142,16 @@ def renameif(session):
             sys.exit(0)
         if x.lower() == 'save':
             # If a slave, filter out the management PIF
-            if host <> master:
+            if host != master:
                 for ref in pifs.keys():
                     if pifs[ref]['management']:
                         del pifs[ref]
             save(session, host, pifs)
             sys.exit(0)
         pif = select(pifs, x)
-        if pif <> None:
+        if pif is not None:
             # Make sure this is not a slave's management PIF
-            if host <> master and pifs[pif]['management']:
+            if host != master and pifs[pif]['management']:
                 print "ERROR: cannot modify the management interface of a slave."
             else:
                 print "Selected NIC with MAC '%s'. Enter new NIC number:" % pifs[pif]['MAC']

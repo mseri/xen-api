@@ -29,7 +29,7 @@ def main(argv):
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hd:", [])
-    except getopt.GetoptError, err:
+    except getopt.GetoptError as err:
         print str(err)
         usage()
 
@@ -38,7 +38,7 @@ def main(argv):
         if o == "-d":
             dir = a
 
-    if dir == None:
+    if dir is None:
         usage()
 
     vms = session.xenapi.VM.get_all_records()
@@ -51,7 +51,7 @@ def main(argv):
     for vm in vms:
         vmrec = vms[vm]
         # Ignore built-in templates
-        if vmrec['other_config'].has_key('default_template'):
+        if 'default_template' in vmrec['other_config']:
             if vmrec['other_config']['default_template'] == 'true':
                 continue
         # Ignore dom0
@@ -63,7 +63,7 @@ def main(argv):
 
         # for each VM, figure out the set of SRs it uses
         for vbd in vmrec['VBDs']:
-            if not vbds.has_key(vbd):
+            if vbd not in vbds:
                 continue
             vdi = vbds[vbd]['VDI']
 
@@ -71,17 +71,17 @@ def main(argv):
             if vdi == '':
                 continue
 
-            if not vdis.has_key(vdi):
+            if vdi not in vdis:
                 continue
 
             sr = vdis[vdi]['SR']
-            if not srs.has_key(sr):
+            if sr not in srs:
                 continue
 
             sruuid = srs[sr]['uuid']
             vmuuid = vmrec['uuid']
 
-            if not vms_in_sr.has_key(sruuid):
+            if sruuid not in vms_in_sr:
                 vms_in_sr[sruuid] = {}
             vms_in_sr[sruuid][vmuuid] = 1
 
