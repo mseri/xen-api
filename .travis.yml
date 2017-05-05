@@ -1,5 +1,6 @@
 language: c
 services: docker
+sudo: required
 install:
         - wget https://raw.githubusercontent.com/xenserver/xenserver-build-env/master/utils/travis-build-repo.sh
         - apt-get install -y python-pylint
