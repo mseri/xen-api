@@ -6,7 +6,7 @@ install:
         - sudo apt-get install -y pylint
 script:
     - bash travis-build-repo.sh
-    - for script in $(find scripts | grep ".py$"); do; pylint -E $script; done
+    - for script in $(find scripts | grep ".py$"); do pylint $script; done
 after_success:
     - test $TRAVIS_PULL_REQUEST == "false" && test $TRAVIS_BRANCH == "master" && bash deploy.sh
 sudo: true
