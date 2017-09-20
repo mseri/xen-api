@@ -66,7 +66,7 @@ let () = Printf.ksprintf Jbuild_plugin.V1.send {|
   (package xapi)
   (flags (:standard -bin-annot %s -warn-error +a-3-4-6-9-27-28-29-52))
   (libraries (
-   oPasswd
+   opasswd
    pam
    pciutil
    pci
@@ -82,6 +82,7 @@ let () = Printf.ksprintf Jbuild_plugin.V1.send {|
    xapi-client
    xapi-datamodel
    xapi-cli-protocol
+   xapi-rrdd-plugin
    xapi-test-utils
    rfb
    stdext
@@ -95,7 +96,6 @@ let () = Printf.ksprintf Jbuild_plugin.V1.send {|
    xcp.v6
    xcp.memory
    xcp.updates
-   rrdd-plugin
    xenopsd
    netdev
   ))
