@@ -355,15 +355,19 @@ module Nvidia = struct
              c.identifier.vsubdev_id
              c.framebufferlength)
            relevant_vgpu_confs));
+    let from_option = function | Some x -> x | None -> "" in
     let rec build_vgpu_types pci_access ac = function
       | [] -> ac
       | conf::tl ->
         debug "Pci.lookup_subsystem_device_name: vendor=%04x device=%04x subdev=%04x"
           vendor_id conf.identifier.vdev_id conf.identifier.vsubdev_id;
-        let vendor_name = Pci.lookup_vendor_name pci_access vendor_id
+        let vendor_name =
+          Pci.lookup_vendor_name pci_access vendor_id
+          |> from_option
         and model_name =
           Pci.lookup_subsystem_device_name pci_access vendor_id
             conf.identifier.vdev_id vendor_id conf.identifier.vsubdev_id
+          |> from_option
         and framebuffer_size = conf.framebufferlength
         and max_heads = conf.num_heads
         and max_resolution_x = conf.max_x
@@ -444,8 +448,12 @@ module Vendor = functor (V : VENDOR) -> struct
     in
     let whitelist = read_whitelist ~whitelist ~device_id in
     let vendor_name, device =
+      let from_option = function  | Some x -> x | None   -> "" in
       Pci.(with_access (fun access ->
-          let vendor_name = lookup_vendor_name access V.vendor_id in
+          let vendor_name =
+            lookup_vendor_name access V.vendor_id
+            |> from_option
+          in
           let device =
             List.find
               (fun device ->
