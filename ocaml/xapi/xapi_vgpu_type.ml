@@ -449,7 +449,14 @@ module Vendor = functor (V : VENDOR) -> struct
     let whitelist = read_whitelist ~whitelist ~device_id in
     let vendor_name, device =
       let from_option = function  | Some x -> x | None   -> "" in
-      Pci.(with_access (fun access ->
+      let from_dump =
+        try
+          Some (Filename.temp_file "pci" "dump")
+        with e ->
+          debug "Unable to create tempfile for libcpi dump: %s" (Printexc.to_string e);
+          None
+      in
+      Pci.(with_access ?from_dump (fun access ->
           let vendor_name =
             lookup_vendor_name access V.vendor_id
             |> from_option
