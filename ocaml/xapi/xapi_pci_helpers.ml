@@ -31,10 +31,6 @@ type pci = {
 }
 
 let get_host_pcis () =
-  let from_option = function
-    | Some x -> x
-    | None   -> ""
-  in
   let from_dump =
     try
       Some (Filename.temp_file "pci" "dump")
@@ -48,16 +44,16 @@ let get_host_pcis () =
       List.map (fun d ->
           let open Pci_dev in
           let address_of_dev x = Printf.sprintf "%04x:%02x:%02x.%d" x.domain x.bus x.dev x.func in
-          let vendor = { id = d.vendor_id; name = from_option @@ lookup_vendor_name access d.vendor_id } in
-          let device = { id = d.device_id; name = from_option @@ lookup_device_name access d.vendor_id d.device_id } in
+          let vendor = { id = d.vendor_id; name = lookup_vendor_name access d.vendor_id } in
+          let device = { id = d.device_id; name = lookup_device_name access d.vendor_id d.device_id } in
           let (subsystem_vendor, subsystem_device) = match d.subsystem_id with
             | None -> None, None
             | Some (sv_id, sd_id) ->
-              let sv_name = from_option @@ lookup_subsystem_vendor_name access sv_id in
-              let sd_name = from_option @@ lookup_subsystem_device_name access d.vendor_id d.device_id sv_id sd_id in
+              let sv_name = lookup_subsystem_vendor_name access sv_id in
+              let sd_name = lookup_subsystem_device_name access d.vendor_id d.device_id sv_id sd_id in
               Some { id = sv_id; name = sv_name }, Some { id = sd_id; name = sd_name }
           in
-          let pci_class = { id = d.device_class; name = from_option @@ lookup_class_name access d.device_class } in
+          let pci_class = { id = d.device_class; name = lookup_class_name access d.device_class } in
           let related_devs =
             List.filter (fun d' ->
                 let slot x = (x.domain, x.bus, x.dev) in
