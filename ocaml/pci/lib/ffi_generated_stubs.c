@@ -202,9 +202,11 @@ value libpci_stub_27_pci_lookup_name(value x192, value x191, value x190,
    int x201 = Long_val(x188);
    char* x204 = pci_lookup_name(x193, x194, x195, x198, x201);
    if (x194 != x204) {
-      fprintf(stderr, "Buffer address is 0x%x, but output address is 0x%x\n", x194, x204);
+      fprintf(stdout, "pciutils: error buffer address is 0x%x, but output address is 0x%x\n", x194, x204);
+      fflush(stdout);
+      fprintf(stderr, "pciutils: error buffer address is 0x%x, but output address is 0x%x\n", x194, x204);
       fflush(stderr);
-      x204 = NULL;
+      // x204 = NULL;
    }
    return CTYPES_FROM_PTR(x204);
 }
