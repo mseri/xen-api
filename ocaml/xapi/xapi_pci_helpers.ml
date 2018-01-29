@@ -34,7 +34,7 @@ let get_host_pcis () =
   let default ~msg v =
     match v with
     | Some v -> v
-    | None -> debug "get_host_pcis: empty %s" msg; ""
+    | None -> failwith "get_host_pcis: pciutils_error"
   in
   let open Pci in
   with_access (fun access ->

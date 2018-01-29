@@ -364,7 +364,7 @@ module Nvidia_old = struct
         let default ~msg v =
           match v with
           | Some v -> v
-          | None -> debug "Pci.lookup_subsystem_device_name: empty %s" msg; ""
+          | None -> failwith "relevant_vgpu_types: pciutils error"
         in
         let vendor_name =
           Pci.lookup_vendor_name pci_access vendor_id
@@ -444,7 +444,7 @@ module Vendor = functor (V : VENDOR) -> struct
     let default ~msg v =
       match v with
       | Some v -> v
-      | None -> debug "make_vgpu_types empty %s" msg; ""
+      | None -> failwith "make_vgpu_types: pciutils error "
     in
     Pci.(with_access (fun access ->
         let vendor_name, device =
