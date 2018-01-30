@@ -1,11 +1,13 @@
 (rule
  ((targets (ffi_generated.ml))
   (deps (../stubgen/ffi_stubgen.exe))
+  (fallback)
   (action (bash "${<} -ml > ffi_generated.ml"))))
 
 (rule
  ((targets (ffi_generated_stubs.c))
   (deps (../stubgen/ffi_stubgen.exe))
+  (fallback)
   (action (bash "${<} -c > ffi_generated_stubs.c"))))
 
 (rule
