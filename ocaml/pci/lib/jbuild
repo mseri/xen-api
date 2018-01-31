@@ -13,6 +13,7 @@
 (rule
  ((targets (ffi_generated_types.ml))
   (deps (../stubgen/ffi_ml_types_stubgen.exe))
+  (fallback)
   (action (bash "${<} -c > ffi_generated_types.ml"))))
 
 (library
