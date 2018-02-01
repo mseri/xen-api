@@ -72,37 +72,37 @@ let maybe f = function
 
 let scan_bus = B.pci_scan_bus
 
-let with_string ?(size=1024) f =
-  let buf = CArray.make char ~initial:'\x00' size in
+let with_string ?finalise ?(size=1024) f =
+  let buf = CArray.make char ?finalise ~initial:'\x00' size in
   f (CArray.start buf) size
 
-let lookup_class_name pci_access class_id =
-  with_string (fun buf size ->
+let lookup_class_name ?finalise pci_access class_id =
+  with_string ?finalise (fun buf size ->
     B.pci_lookup_name_1_ary pci_access buf size T.Lookup_mode.lookup_class
       class_id)
 
-let lookup_progif_name pci_access class_id progif_id =
-  with_string (fun buf size ->
+let lookup_progif_name ?finalise pci_access class_id progif_id =
+  with_string ?finalise (fun buf size ->
     B.pci_lookup_name_2_ary pci_access buf size T.Lookup_mode.lookup_progif
       class_id progif_id)
 
-let lookup_vendor_name pci_access vendor_id =
-  with_string (fun buf size ->
+let lookup_vendor_name ?finalise pci_access vendor_id =
+  with_string ?finalise (fun buf size ->
     B.pci_lookup_name_1_ary pci_access buf size T.Lookup_mode.lookup_vendor
       vendor_id)
 
-let lookup_device_name pci_access vendor_id device_id =
-  with_string (fun buf size ->
+let lookup_device_name ?finalise pci_access vendor_id device_id =
+  with_string ?finalise (fun buf size ->
     B.pci_lookup_name_2_ary pci_access buf size T.Lookup_mode.lookup_device
       vendor_id device_id)
 
-let lookup_subsystem_vendor_name pci_access subv_id =
-  with_string (fun buf size ->
+let lookup_subsystem_vendor_name ?finalise pci_access subv_id =
+  with_string ?finalise (fun buf size ->
     let lookup_flags = T.Lookup_mode.([ lookup_subsystem; lookup_vendor ]) in
     B.pci_lookup_name_1_ary pci_access buf size (crush_flags id lookup_flags)
       subv_id)
 
-let lookup_subsystem_device_name pci_access vendor_id device_id subv_id subd_id =
+let lookup_subsystem_device_name ?finalise pci_access vendor_id device_id subv_id subd_id =
   with_string (fun buf size ->
     let lookup_flags = T.Lookup_mode.([ lookup_subsystem; lookup_device ]) in
     B.pci_lookup_name_4_ary pci_access buf size (crush_flags id lookup_flags)
